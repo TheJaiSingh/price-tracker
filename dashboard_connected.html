@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PriceWatch — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<!-- Google Sign-In library -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{
+    --paper:#F2F1E4; --card:#FFFFFF; --ink:#20261C; --ink-soft:#5B6156;
+    --drop:#D2481E; --save:#3E8E5C; --gold:#C79A2E; --blue:#3E6E9E;
+    --line: rgba(32,38,28,0.12);
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Inter', sans-serif; color:var(--ink); background: var(--paper); position:relative; overflow-x:hidden; min-height:100vh; }
+  h1,h2,h3{ font-family:'Fraunces', serif; margin:0; }
+  .mono{ font-family:'JetBrains Mono', monospace; }
+
+  .bg-anim{ position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
+  .blob{ position:absolute; border-radius:50%; filter: blur(60px); opacity:.35; animation: float 16s ease-in-out infinite; }
+  .blob.b1{ width:420px; height:420px; background: var(--gold); top:-120px; left:-100px; animation-duration:18s; }
+  .blob.b2{ width:360px; height:360px; background: var(--save); bottom:-140px; right:-80px; animation-duration:22s; animation-delay:-4s; }
+  .blob.b3{ width:300px; height:300px; background: var(--drop); top:40%; left:60%; animation-duration:20s; animation-delay:-9s; opacity:.22; }
+  .blob.b4{ width:260px; height:260px; background: var(--blue); top:10%; right:10%; animation-duration:14s; animation-delay:-6s; opacity:.2; }
+  @keyframes float{ 0%,100%{ transform: translate(0,0) scale(1);} 33%{ transform: translate(40px,-30px) scale(1.08);} 66%{ transform: translate(-30px,25px) scale(0.95);} }
+
+  header, main{ position:relative; z-index:1; }
+  header{ display:flex; justify-content:space-between; align-items:center; padding: 26px 6vw; backdrop-filter: blur(6px); }
+  .logo{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:17px; }
+  .logo .dot{ width:12px; height:12px; border-radius:50%; background: var(--drop); box-shadow:0 0 0 4px rgba(210,72,30,0.15); }
+
+  .user-chip{ display:none; align-items:center; gap:10px; font-size:13px; font-weight:600; background:var(--card); border:1px solid var(--line); padding:8px 14px; border-radius:999px; }
+  .user-chip img{ width:26px; height:26px; border-radius:50%; }
+  .user-chip button{ background:none; border:none; color:var(--ink-soft); cursor:pointer; font-size:12px; text-decoration:underline; margin-left:6px; }
+
+  /* ---------- Login gate ---------- */
+  #loginGate{ min-height: 70vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; position:relative; z-index:1; padding: 20px; }
+  #loginGate h1{ font-size: clamp(30px,4vw,48px); margin-bottom:14px; }
+  #loginGate p{ color:var(--ink-soft); max-width:40ch; margin-bottom:28px; }
+
+  main{ padding: 20px 6vw 90px; max-width:1200px; margin:0 auto; display:none; }
+  .top{ display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:20px; margin-bottom:40px; }
+  .eyebrow{ font-family:'JetBrains Mono'; font-size:12px; letter-spacing:.12em; text-transform:uppercase; color: var(--ink-soft); display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .eyebrow::before{ content:''; width:22px; height:1px; background:var(--drop); }
+  .top h1{ font-size: clamp(30px,3.6vw,46px); font-weight:600; }
+  .top p{ color:var(--ink-soft); max-width:44ch; margin-top:10px; font-size:15px; }
+
+  .add-btn{ display:inline-flex; align-items:center; gap:10px; background: var(--ink); color: var(--paper); font-weight:600; font-size:15px; padding:15px 28px; border:none; border-radius:8px; cursor:pointer; transition: transform .18s ease, box-shadow .18s ease; }
+  .add-btn:hover{ transform: translateY(-3px); box-shadow: 0 10px 24px rgba(32,38,28,0.25); }
+  .add-btn .plus{ font-size:18px; transition: transform .25s ease; }
+  .add-btn:hover .plus{ transform: rotate(90deg); }
+
+  .add-panel{ max-height:0; overflow:hidden; transition: max-height .4s ease, margin .4s ease; background: var(--card); border:1px solid var(--line); border-radius:12px; }
+  .add-panel.open{ max-height:220px; margin-top:22px; }
+  .add-panel-inner{ display:flex; gap:14px; padding:22px; flex-wrap:wrap; align-items:center; }
+  .add-panel-inner input{ flex:1; min-width:200px; padding:13px 16px; border-radius:8px; border:1px solid var(--line); font-family:'Inter'; font-size:14px; background:var(--paper); outline:none; }
+  .add-panel-inner input:focus{ border-color: var(--drop); }
+  .add-panel-inner button.submit{ background: var(--save); color:#fff; border:none; padding:13px 24px; border-radius:8px; font-weight:600; cursor:pointer; }
+  .status-msg{ font-family:'JetBrains Mono'; font-size:12px; margin-top:10px; padding:0 22px 14px; }
+  .status-msg.loading{ color: var(--blue); }
+  .status-msg.error{ color: var(--drop); }
+
+  .grid{ display:grid; grid-template-columns: repeat(3,1fr); gap:22px; }
+  .card{ background: var(--card); border:1px solid var(--line); border-radius:14px; padding:22px; position:relative; overflow:hidden; transition: transform .25s ease, box-shadow .25s ease; }
+  .card:hover{ transform: translateY(-6px); box-shadow: 0 16px 32px rgba(32,38,28,0.14); }
+  .card .tag-corner{ position:absolute; top:0; right:0; padding:6px 12px; font-family:'JetBrains Mono'; font-size:10px; letter-spacing:.05em; border-bottom-left-radius:10px; color:#fff; }
+  .card.hot .tag-corner{ background: var(--drop); }
+  .card.hit .tag-corner{ background: var(--save); }
+  .thumb{ width:100%; height:110px; border-radius:10px; margin-bottom:16px; background: linear-gradient(135deg, #ece9d4, #f6f4e8); display:flex; align-items:center; justify-content:center; font-size:34px; color: var(--ink-soft); overflow:hidden; }
+  .thumb img{ width:100%; height:100%; object-fit:contain; background:#fff; }
+  .card .name{ font-size:14px; font-weight:600; margin-bottom:4px; word-break: break-word; }
+  .card .cat{ font-size:12px; color:var(--ink-soft); margin-bottom:14px; }
+  .row{ display:flex; justify-content:space-between; align-items:baseline; margin-top:8px; }
+  .price{ font-family:'JetBrains Mono'; font-size:21px; font-weight:600; }
+  .price.hit{ color: var(--save); }
+  .delta{ font-family:'JetBrains Mono'; font-size:11.5px; color: var(--ink-soft); }
+  .refresh-btn{ margin-top:16px; width:100%; padding:11px; border-radius:8px; border:1px solid var(--line); background: transparent; font-weight:600; font-size:13px; cursor:pointer; color: var(--ink); }
+  .refresh-btn:hover{ background: var(--ink); color:var(--paper); }
+  .empty-state{ text-align:center; padding: 60px 20px; color: var(--ink-soft); font-family:'JetBrains Mono'; font-size:14px; }
+
+  @media (max-width: 900px){ .grid{ grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 620px){ .grid{ grid-template-columns: 1fr; } header{ flex-direction:column; gap:14px; } }
+</style>
+</head>
+<body>
+
+<div class="bg-anim">
+  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div>
+</div>
+
+<header>
+  <div class="logo"><span class="dot"></span> PriceWatch</div>
+  <div class="user-chip" id="userChip">
+    <img id="userAvatar" src="" alt="">
+    <span id="userName"></span>
+    <button onclick="logout()">Logout</button>
+  </div>
+</header>
+
+<!-- ---------- Login Screen ---------- -->
+<div id="loginGate">
+  <h1>Track prices.<br>Get notified instantly.</h1>
+  <p>Sign in with Google to start tracking Amazon products — price alerts go straight to your inbox.</p>
+  <div id="googleSignInBtn"></div>
+</div>
+
+<!-- ---------- Dashboard (hidden until logged in) ---------- -->
+<main id="dashboardMain">
+  <div class="top">
+    <div>
+      <div class="eyebrow">Your tracked products</div>
+      <h1>Every price, watched in one place.</h1>
+      <p>Add a product, set your target price, and get an email when it drops.</p>
+    </div>
+    <div>
+      <button class="add-btn" onclick="togglePanel()">
+        <span class="plus">+</span> Track new product
+      </button>
+    </div>
+  </div>
+
+  <div class="add-panel" id="addPanel">
+    <div class="add-panel-inner">
+      <input type="text" id="urlInput" placeholder="Paste Amazon product URL...">
+      <input type="text" id="priceInput" placeholder="Target price (₹)" style="max-width:180px;">
+      <button class="submit" onclick="addProduct()">Start tracking</button>
+    </div>
+    <div class="status-msg" id="statusMsg"></div>
+  </div>
+
+  <div class="grid" id="grid">
+    <div class="empty-state">Loading your tracked products...</div>
+  </div>
+</main>
+
+<script>
+  // Local testing (Live Server se khola) -> backend 127.0.0.1:8000 pe hai
+  // Deployed (Railway se serve ho raha) -> same origin use karo (empty string)
+  const API_BASE = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
+    ? "http://127.0.0.1:8000"
+    : "";
+  let currentUser = null;   // { email, name, picture }
+
+  // ============================================================
+  // GOOGLE SIGN-IN SETUP
+  // ============================================================
+  window.onload = function () {
+    google.accounts.id.initialize({
+      client_id: "331699817935-ui9behvct4leckcuujfogbsv4km696t7.apps.googleusercontent.com",  
+      callback: handleGoogleLogin
+    });
+    google.accounts.id.renderButton(
+      document.getElementById("googleSignInBtn"),
+      { theme: "filled_black", size: "large", shape: "pill" }
+    );
+
+    // Agar pehle se login tha (saved in browser), auto-login kar do
+    const saved = localStorage.getItem("pricewatch_user");
+    if (saved) {
+      currentUser = JSON.parse(saved);
+      showDashboard();
+    }
+  };
+
+  // Jab Google se login successful ho jaye, ye function chalta hai
+  async function handleGoogleLogin(response) {
+    const idToken = response.credential;   // Google ka ID token
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: idToken })
+      });
+      if (!res.ok) throw new Error("Login failed");
+      const data = await res.json();
+
+      currentUser = { email: data.email, name: data.name, picture: data.picture };
+      localStorage.setItem("pricewatch_user", JSON.stringify(currentUser));
+      showDashboard();
+    } catch (err) {
+      alert("Google login failed. Check backend is running.");
+      console.error(err);
+    }
+  }
+
+  function showDashboard() {
+    document.getElementById("loginGate").style.display = "none";
+    document.getElementById("dashboardMain").style.display = "block";
+    const chip = document.getElementById("userChip");
+    chip.style.display = "flex";
+    document.getElementById("userName").textContent = currentUser.name || currentUser.email;
+    const avatar = document.getElementById("userAvatar");
+    if (currentUser.picture) {
+      avatar.src = currentUser.picture;
+      avatar.style.display = "inline-block";
+    } else {
+      avatar.style.display = "none";
+    }
+    loadProducts();
+  }
+
+  function logout() {
+    localStorage.removeItem("pricewatch_user");
+    currentUser = null;
+    location.reload();
+  }
+
+  // ============================================================
+  // PRODUCTS (scoped to currentUser.email)
+  // ============================================================
+  async function loadProducts() {
+    const grid = document.getElementById("grid");
+    try {
+      const response = await fetch(`${API_BASE}/products?email=${encodeURIComponent(currentUser.email)}`);
+      const products = await response.json();
+
+      if (products.length === 0) {
+        grid.innerHTML = `<div class="empty-state">No products tracked yet. Click "Track new product" to add one.</div>`;
+        return;
+      }
+      grid.innerHTML = products.map(renderCard).join("");
+    } catch (err) {
+      grid.innerHTML = `<div class="empty-state">⚠️ Could not reach backend.</div>`;
+      console.error(err);
+    }
+  }
+
+  function renderCard(product) {
+    const current = parseFloat(product.current_price);
+    const target = parseFloat(product.target_price);
+    const hit = current <= target;
+    const imgTag = product.image_url
+      ? `<img src="${product.image_url}" alt="${product.product_name}" onerror="this.parentElement.innerHTML='📦'">`
+      : '📦';
+    return `
+      <div class="card ${hit ? 'hit' : 'hot'}">
+        <div class="tag-corner">${hit ? '🎯 TARGET HIT' : '↓ TRACKING'}</div>
+        <div class="thumb">${imgTag}</div>
+        <div class="name">${product.product_name || 'Unnamed product'}</div>
+        <div class="cat mono">ID: ${product.id}</div>
+        <div class="row">
+          <span class="price ${hit ? 'hit' : ''} mono">₹${current.toLocaleString('en-IN')}</span>
+          <span class="delta">target ₹${target.toLocaleString('en-IN')}</span>
+        </div>
+        <button class="refresh-btn" onclick="refreshProduct(${product.id})">🔄 Check price now</button>
+      </div>
+    `;
+  }
+
+  function togglePanel(){ document.getElementById('addPanel').classList.toggle('open'); }
+
+  async function addProduct() {
+    const url = document.getElementById("urlInput").value.trim();
+    const target = document.getElementById("priceInput").value.trim();
+    const statusMsg = document.getElementById("statusMsg");
+
+    if (!url || !target) {
+      statusMsg.textContent = "Please fill both fields.";
+      statusMsg.className = "status-msg error";
+      return;
+    }
+    statusMsg.textContent = "Adding product, checking price...";
+    statusMsg.className = "status-msg loading";
+
+    try {
+      const response = await fetch(`${API_BASE}/products?email=${encodeURIComponent(currentUser.email)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product_url: url, target_price: parseFloat(target) })
+      });
+      if (!response.ok) throw new Error("Request failed");
+
+      statusMsg.textContent = "Product added!";
+      statusMsg.className = "status-msg";
+      document.getElementById("urlInput").value = "";
+      document.getElementById("priceInput").value = "";
+      loadProducts();
+    } catch (err) {
+      statusMsg.textContent = "⚠️ Could not add product.";
+      statusMsg.className = "status-msg error";
+      console.error(err);
+    }
+  }
+
+  async function refreshProduct(id) {
+    try {
+      await fetch(`${API_BASE}/products/${id}/refresh`, { method: "POST" });
+      loadProducts();
+    } catch (err) {
+      alert("Could not refresh price.");
+    }
+  }
+</script>
+
+</body>
+</html>

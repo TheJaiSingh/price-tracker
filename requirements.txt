@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+mysql-connector-python
+requests
+beautifulsoup4
+pydantic
+google-auth
