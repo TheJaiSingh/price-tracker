@@ -5,296 +5,324 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PriceWatch — Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<!-- Google Sign-In library -->
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
-  :root{
-    --paper:#F2F1E4; --card:#FFFFFF; --ink:#20261C; --ink-soft:#5B6156;
-    --drop:#D2481E; --save:#3E8E5C; --gold:#C79A2E; --blue:#3E6E9E;
-    --line: rgba(32,38,28,0.12);
-  }
-  *{ box-sizing:border-box; }
-  body{ margin:0; font-family:'Inter', sans-serif; color:var(--ink); background: var(--paper); position:relative; overflow-x:hidden; min-height:100vh; }
-  h1,h2,h3{ font-family:'Fraunces', serif; margin:0; }
-  .mono{ font-family:'JetBrains Mono', monospace; }
-
-  .bg-anim{ position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
-  .blob{ position:absolute; border-radius:50%; filter: blur(60px); opacity:.35; animation: float 16s ease-in-out infinite; }
-  .blob.b1{ width:420px; height:420px; background: var(--gold); top:-120px; left:-100px; animation-duration:18s; }
-  .blob.b2{ width:360px; height:360px; background: var(--save); bottom:-140px; right:-80px; animation-duration:22s; animation-delay:-4s; }
-  .blob.b3{ width:300px; height:300px; background: var(--drop); top:40%; left:60%; animation-duration:20s; animation-delay:-9s; opacity:.22; }
-  .blob.b4{ width:260px; height:260px; background: var(--blue); top:10%; right:10%; animation-duration:14s; animation-delay:-6s; opacity:.2; }
-  @keyframes float{ 0%,100%{ transform: translate(0,0) scale(1);} 33%{ transform: translate(40px,-30px) scale(1.08);} 66%{ transform: translate(-30px,25px) scale(0.95);} }
-
-  header, main{ position:relative; z-index:1; }
-  header{ display:flex; justify-content:space-between; align-items:center; padding: 26px 6vw; backdrop-filter: blur(6px); }
-  .logo{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:17px; }
-  .logo .dot{ width:12px; height:12px; border-radius:50%; background: var(--drop); box-shadow:0 0 0 4px rgba(210,72,30,0.15); }
-
-  .user-chip{ display:none; align-items:center; gap:10px; font-size:13px; font-weight:600; background:var(--card); border:1px solid var(--line); padding:8px 14px; border-radius:999px; }
-  .user-chip img{ width:26px; height:26px; border-radius:50%; }
-  .user-chip button{ background:none; border:none; color:var(--ink-soft); cursor:pointer; font-size:12px; text-decoration:underline; margin-left:6px; }
-
-  /* ---------- Login gate ---------- */
-  #loginGate{ min-height: 70vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; position:relative; z-index:1; padding: 20px; }
-  #loginGate h1{ font-size: clamp(30px,4vw,48px); margin-bottom:14px; }
-  #loginGate p{ color:var(--ink-soft); max-width:40ch; margin-bottom:28px; }
-
-  main{ padding: 20px 6vw 90px; max-width:1200px; margin:0 auto; display:none; }
-  .top{ display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:20px; margin-bottom:40px; }
-  .eyebrow{ font-family:'JetBrains Mono'; font-size:12px; letter-spacing:.12em; text-transform:uppercase; color: var(--ink-soft); display:flex; align-items:center; gap:10px; margin-bottom:14px; }
-  .eyebrow::before{ content:''; width:22px; height:1px; background:var(--drop); }
-  .top h1{ font-size: clamp(30px,3.6vw,46px); font-weight:600; }
-  .top p{ color:var(--ink-soft); max-width:44ch; margin-top:10px; font-size:15px; }
-
-  .add-btn{ display:inline-flex; align-items:center; gap:10px; background: var(--ink); color: var(--paper); font-weight:600; font-size:15px; padding:15px 28px; border:none; border-radius:8px; cursor:pointer; transition: transform .18s ease, box-shadow .18s ease; }
-  .add-btn:hover{ transform: translateY(-3px); box-shadow: 0 10px 24px rgba(32,38,28,0.25); }
-  .add-btn .plus{ font-size:18px; transition: transform .25s ease; }
-  .add-btn:hover .plus{ transform: rotate(90deg); }
-
-  .add-panel{ max-height:0; overflow:hidden; transition: max-height .4s ease, margin .4s ease; background: var(--card); border:1px solid var(--line); border-radius:12px; }
-  .add-panel.open{ max-height:220px; margin-top:22px; }
-  .add-panel-inner{ display:flex; gap:14px; padding:22px; flex-wrap:wrap; align-items:center; }
-  .add-panel-inner input{ flex:1; min-width:200px; padding:13px 16px; border-radius:8px; border:1px solid var(--line); font-family:'Inter'; font-size:14px; background:var(--paper); outline:none; }
-  .add-panel-inner input:focus{ border-color: var(--drop); }
-  .add-panel-inner button.submit{ background: var(--save); color:#fff; border:none; padding:13px 24px; border-radius:8px; font-weight:600; cursor:pointer; }
-  .status-msg{ font-family:'JetBrains Mono'; font-size:12px; margin-top:10px; padding:0 22px 14px; }
-  .status-msg.loading{ color: var(--blue); }
-  .status-msg.error{ color: var(--drop); }
-
-  .grid{ display:grid; grid-template-columns: repeat(3,1fr); gap:22px; }
-  .card{ background: var(--card); border:1px solid var(--line); border-radius:14px; padding:22px; position:relative; overflow:hidden; transition: transform .25s ease, box-shadow .25s ease; }
-  .card:hover{ transform: translateY(-6px); box-shadow: 0 16px 32px rgba(32,38,28,0.14); }
-  .card .tag-corner{ position:absolute; top:0; right:0; padding:6px 12px; font-family:'JetBrains Mono'; font-size:10px; letter-spacing:.05em; border-bottom-left-radius:10px; color:#fff; }
-  .card.hot .tag-corner{ background: var(--drop); }
-  .card.hit .tag-corner{ background: var(--save); }
-  .thumb{ width:100%; height:110px; border-radius:10px; margin-bottom:16px; background: linear-gradient(135deg, #ece9d4, #f6f4e8); display:flex; align-items:center; justify-content:center; font-size:34px; color: var(--ink-soft); overflow:hidden; }
-  .thumb img{ width:100%; height:100%; object-fit:contain; background:#fff; }
-  .card .name{ font-size:14px; font-weight:600; margin-bottom:4px; word-break: break-word; }
-  .card .cat{ font-size:12px; color:var(--ink-soft); margin-bottom:14px; }
-  .row{ display:flex; justify-content:space-between; align-items:baseline; margin-top:8px; }
-  .price{ font-family:'JetBrains Mono'; font-size:21px; font-weight:600; }
-  .price.hit{ color: var(--save); }
-  .delta{ font-family:'JetBrains Mono'; font-size:11.5px; color: var(--ink-soft); }
-  .refresh-btn{ margin-top:16px; width:100%; padding:11px; border-radius:8px; border:1px solid var(--line); background: transparent; font-weight:600; font-size:13px; cursor:pointer; color: var(--ink); }
-  .refresh-btn:hover{ background: var(--ink); color:var(--paper); }
-  .empty-state{ text-align:center; padding: 60px 20px; color: var(--ink-soft); font-family:'JetBrains Mono'; font-size:14px; }
-
-  @media (max-width: 900px){ .grid{ grid-template-columns: repeat(2,1fr); } }
-  @media (max-width: 620px){ .grid{ grid-template-columns: 1fr; } header{ flex-direction:column; gap:14px; } }
+:root{--bg:#EDF0EA;--surface:#FBFCFA;--ink:#13212C;--ink2:#566470;--line:#D5DBD0;--tag:#EBB80F;--hit:#1B8A5A;--blue:#2F5D9B}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 'Figtree',sans-serif;min-height:100vh}
+h1,h2,h3,.price{font-family:'Bricolage Grotesque',sans-serif;margin:0}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+header{display:flex;justify-content:space-between;align-items:center;padding:20px 5vw}
+.logo{font:700 20px 'Bricolage Grotesque';display:flex;align-items:center;gap:9px}
+.logo i{width:14px;height:14px;background:var(--tag);border-radius:3px 7px 3px 7px;display:block}
+.chip{display:none;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);padding:6px 8px 6px 6px;border-radius:99px;font-weight:600;font-size:13px}
+.chip img{width:26px;height:26px;border-radius:50%}
+.chip button{background:none;border:0;color:var(--ink2);text-decoration:underline;font-size:13px}
+#loginGate{min-height:68vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
+#loginGate h1{font-size:clamp(34px,6vw,64px);line-height:1.02;letter-spacing:-.02em;max-width:14ch;margin-bottom:16px}
+#loginGate p{color:var(--ink2);max-width:42ch;margin:0 0 28px}
+main{display:none;max-width:1180px;margin:0 auto;padding:12px 5vw 80px}
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:26px}
+.top h1{font-size:clamp(28px,4vw,44px);line-height:1.08;letter-spacing:-.015em;max-width:20ch}
+.top p{color:var(--ink2);margin:8px 0 0}
+.btn{border:0;border-radius:9px;padding:12px 20px;font-weight:600;background:var(--ink);color:#fff}
+.btn:hover{background:#243846}
+.btn.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.alt:hover{border-color:var(--ink)}
+.btn:disabled{opacity:.6;cursor:wait}
+.add{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s ease}
+.add.open{grid-template-rows:1fr;margin-bottom:22px}
+.add>div{overflow:hidden}
+.add form{display:flex;gap:10px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.add input,.tools input,.tools select{font:inherit;padding:11px 14px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink)}
+.add input{flex:1 1 220px}.add .tp{flex:0 1 170px}
+.msg{flex-basis:100%;font-size:13px;min-height:1em;color:var(--ink2)}.msg.err{color:#B3362B}
+.tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:20px}
+.tools input{flex:1 1 200px;max-width:320px}
+.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
+.seg button{border:0;background:none;padding:10px 14px;font-weight:600;color:var(--ink2)}
+.seg button[aria-pressed=true]{background:var(--ink);color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;position:relative;display:flex;flex-direction:column}
+.card.hit{border-left:5px solid var(--hit)}
+.card .open{all:unset;cursor:pointer;display:block;padding:16px 16px 4px}
+.card .open:focus-visible{outline:3px solid var(--blue);outline-offset:-3px}
+.card:hover{border-color:#9AA597}
+.thumb{height:120px;border-radius:9px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:34px;margin-bottom:12px;overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:contain}
+.name{font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.6em}
+.nums{display:flex;justify-content:space-between;align-items:baseline;margin-top:10px}
+.price{font-size:26px;font-weight:700;letter-spacing:-.01em}.card.hit .price{color:var(--hit)}
+.tgt{font-size:13px;color:var(--ink2)}
+.gauge{height:8px;background:#E3E8DF;border-radius:4px;margin-top:10px;overflow:hidden}
+.gauge b{display:block;height:100%;background:var(--tag);border-radius:4px;transition:width .5s ease}
+.card.hit .gauge b{background:var(--hit)}
+.gtxt{font-size:12.5px;color:var(--ink2);margin-top:6px}
+.spark{height:34px;margin-top:8px;color:var(--ink2);font-size:12px}
+.spark svg{width:100%;height:34px;display:block}
+.card .check{margin:8px 16px 16px}
+.skel{height:330px;border-radius:14px;background:linear-gradient(90deg,#E3E8DF,#F1F4EE,#E3E8DF);background-size:200% 100%;animation:sh 1.3s infinite}
+@keyframes sh{to{background-position:-200% 0}}
+.empty{grid-column:1/-1;text-align:center;padding:60px 16px;color:var(--ink2)}
+.empty b{display:block;color:var(--ink);font:600 20px 'Bricolage Grotesque';margin-bottom:6px}
+.scrim{position:fixed;inset:0;background:rgba(19,33,44,.45);opacity:0;pointer-events:none;transition:opacity .25s;z-index:20}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(560px,100%);background:var(--surface);z-index:21;transform:translateX(100%);transition:transform .3s ease;overflow-y:auto;padding:22px}
+.drawer.on{transform:none}
+.drawer h2{font-size:22px;line-height:1.2;margin:0 40px 14px 0}
+.dx{position:absolute;top:16px;right:16px;border:0;background:var(--bg);width:34px;height:34px;border-radius:50%;font-size:18px}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.facts div{background:var(--bg);border-radius:10px;padding:10px 12px}
+.facts span{display:block;font-size:12px;color:var(--ink2)}.facts b{font:700 18px 'Bricolage Grotesque'}
+.chart{position:relative}.chart svg{width:100%;height:auto;display:block}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;font-size:12px;padding:5px 9px;border-radius:7px;transform:translate(-50%,-120%);white-space:nowrap;display:none}
+.hist{list-style:none;margin:14px 0;padding:0;font-size:14px}
+.hist li{display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line)}
+.acts{display:flex;gap:10px;flex-wrap:wrap}
+.acts a{text-decoration:none;display:inline-block}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:30;display:flex;flex-direction:column;gap:8px;align-items:center}
+#toast div{background:var(--ink);color:#fff;padding:11px 18px;border-radius:10px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+@media(max-width:620px){header{flex-direction:row}.facts{grid-template-columns:1fr 1fr 1fr}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
-
-<div class="bg-anim">
-  <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div>
-</div>
-
 <header>
-  <div class="logo"><span class="dot"></span> PriceWatch</div>
-  <div class="user-chip" id="userChip">
-    <img id="userAvatar" src="" alt="">
-    <span id="userName"></span>
-    <button onclick="logout()">Logout</button>
-  </div>
+  <div class="logo"><i></i>PriceWatch</div>
+  <div class="chip" id="userChip"><img id="userAvatar" alt=""><span id="userName"></span><button onclick="logout()">Log out</button></div>
 </header>
 
-<!-- ---------- Login Screen ---------- -->
 <div id="loginGate">
-  <h1>Track prices.<br>Get notified instantly.</h1>
-  <p>Sign in with Google to start tracking Amazon products — price alerts go straight to your inbox.</p>
+  <h1>Buy it when the price is right.</h1>
+  <p>Sign in with Google, add an Amazon link and a target price. We email you the moment it drops.</p>
   <div id="googleSignInBtn"></div>
 </div>
 
-<!-- ---------- Dashboard (hidden until logged in) ---------- -->
 <main id="dashboardMain">
   <div class="top">
-    <div>
-      <div class="eyebrow">Your tracked products</div>
-      <h1>Every price, watched in one place.</h1>
-      <p>Add a product, set your target price, and get an email when it drops.</p>
-    </div>
-    <div>
-      <button class="add-btn" onclick="togglePanel()">
-        <span class="plus">+</span> Track new product
-      </button>
-    </div>
+    <div><h1 id="headline">Loading your watchlist…</h1><p id="subline"></p></div>
+    <button class="btn" id="addToggle" aria-expanded="false" onclick="togglePanel()">+ Track a product</button>
   </div>
 
-  <div class="add-panel" id="addPanel">
-    <div class="add-panel-inner">
-      <input type="text" id="urlInput" placeholder="Paste Amazon product URL...">
-      <input type="text" id="priceInput" placeholder="Target price (₹)" style="max-width:180px;">
-      <button class="submit" onclick="addProduct()">Start tracking</button>
+  <div class="add" id="addPanel"><div>
+    <form onsubmit="addProduct(event)">
+      <input id="urlInput" placeholder="Amazon product link" aria-label="Amazon product link" autocomplete="off">
+      <input id="priceInput" class="tp" inputmode="decimal" placeholder="Target price (₹)" aria-label="Target price in rupees">
+      <button class="btn" id="addBtn">Start tracking</button>
+      <div class="msg" id="statusMsg" role="status"></div>
+    </form>
+  </div></div>
+
+  <div class="tools">
+    <input type="search" id="q" placeholder="Search products" aria-label="Search products" oninput="view.q=this.value;render()">
+    <div class="seg" role="group" aria-label="Filter">
+      <button aria-pressed="true" data-f="all">All</button>
+      <button aria-pressed="false" data-f="hit">At target</button>
+      <button aria-pressed="false" data-f="wait">Waiting</button>
     </div>
-    <div class="status-msg" id="statusMsg"></div>
+    <select id="sort" aria-label="Sort" onchange="view.sort=this.value;render()">
+      <option value="new">Newest first</option>
+      <option value="gap">Closest to target</option>
+      <option value="low">Price: low to high</option>
+    </select>
   </div>
 
-  <div class="grid" id="grid">
-    <div class="empty-state">Loading your tracked products...</div>
-  </div>
+  <div class="grid" id="grid"></div>
 </main>
 
+<div class="scrim" id="scrim" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer" aria-hidden="true" role="dialog" aria-label="Price history"></aside>
+<div id="toast" aria-live="polite"></div>
+
 <script>
-  // Local testing (Live Server se khola) -> backend 127.0.0.1:8000 pe hai
-  // Deployed (Railway se serve ho raha) -> same origin use karo (empty string)
-  const API_BASE = window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost"
-    ? "http://127.0.0.1:8000"
-    : "";
-  let currentUser = null;   // { email, name, picture }
+const API_BASE = (location.hostname === "127.0.0.1" || location.hostname === "localhost") ? "http://127.0.0.1:8000" : "";
+let currentUser = null, products = [], hist = {}, openId = null, lastFocus = null;
+const view = { q: "", filter: "all", sort: "new" };
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const inr = n => "₹" + Number(n).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+const when = d => new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+const isHit = p => Number(p.current_price) <= Number(p.target_price);
+async function api(path, opts) { const r = await fetch(API_BASE + path, opts); if (!r.ok) throw new Error(r.status); return r.json(); }
+function toast(msg) { const d = document.createElement("div"); d.textContent = msg; $("toast").appendChild(d); setTimeout(() => d.remove(), 3800); }
 
-  // ============================================================
-  // GOOGLE SIGN-IN SETUP
-  // ============================================================
-  window.onload = function () {
-    google.accounts.id.initialize({
-      client_id: "331699817935-ui9behvct4leckcuujfogbsv4km696t7.apps.googleusercontent.com",  
-      callback: handleGoogleLogin
+/* ---------- Google sign-in ---------- */
+function initGoogle() {
+  if (!window.google || !google.accounts) return false;
+  google.accounts.id.initialize({ client_id: "331699817935-ui9behvct4leckcuujfogbsv4km696t7.apps.googleusercontent.com", callback: handleGoogleLogin });
+  google.accounts.id.renderButton($("googleSignInBtn"), { theme: "filled_black", size: "large", shape: "pill" });
+  return true;
+}
+window.onload = () => {
+  const saved = localStorage.getItem("pricewatch_user");
+  if (saved) { currentUser = JSON.parse(saved); showDashboard(); }
+  let tries = 0; const t = setInterval(() => { if (initGoogle() || ++tries > 50) clearInterval(t); }, 100);
+};
+async function handleGoogleLogin(resp) {
+  try {
+    const d = await api("/auth/google", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: resp.credential }) });
+    currentUser = { email: d.email, name: d.name, picture: d.picture };
+    localStorage.setItem("pricewatch_user", JSON.stringify(currentUser));
+    showDashboard();
+  } catch (e) { toast("Google sign-in failed. Please try again."); }
+}
+function showDashboard() {
+  $("loginGate").style.display = "none"; $("dashboardMain").style.display = "block";
+  $("userChip").style.display = "flex"; $("userName").textContent = currentUser.name || currentUser.email;
+  const a = $("userAvatar"); if (currentUser.picture) a.src = currentUser.picture; else a.style.display = "none";
+  loadProducts();
+}
+function logout() { localStorage.removeItem("pricewatch_user"); location.reload(); }
+
+/* ---------- Data ---------- */
+async function loadProducts() {
+  $("grid").innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+  try {
+    products = await api("/products?email=" + encodeURIComponent(currentUser.email));
+    render();
+    products.forEach(p => loadHist(p.id));
+  } catch (e) {
+    $("headline").textContent = "Can't reach the server.";
+    $("grid").innerHTML = '<div class="empty"><b>Something went wrong</b>Check your connection and reload the page.</div>';
+  }
+}
+async function loadHist(id) {
+  try { hist[id] = await api(`/products/${id}/history`); } catch (e) { hist[id] = []; }
+  const el = document.querySelector(`[data-spark="${id}"]`); if (el) el.innerHTML = spark(hist[id]);
+  if (openId === id) openDrawer(id, true);
+}
+
+/* ---------- Rendering ---------- */
+function gap(p) { const c = Number(p.current_price), t = Number(p.target_price); return (c - t) / c; }
+function render() {
+  const hits = products.filter(isHit).length, n = products.length;
+  $("headline").textContent = n === 0 ? "Your watchlist is empty." : hits ? `${hits} of ${n} ${n === 1 ? "product has" : "products have"} reached your target.` : `Watching ${n} ${n === 1 ? "product" : "products"}.`;
+  $("subline").textContent = n === 0 ? "Add an Amazon link and a target price to begin." : hits ? "Open one to see its price history, or go buy." : "We'll email you when any of them drops to your target.";
+  let list = products.filter(p => (p.product_name || "").toLowerCase().includes(view.q.toLowerCase()) && (view.filter === "all" || (view.filter === "hit") === isHit(p)));
+  if (view.sort === "gap") list.sort((a, b) => gap(a) - gap(b));
+  if (view.sort === "low") list.sort((a, b) => a.current_price - b.current_price);
+  $("grid").innerHTML = list.length ? list.map(card).join("") :
+    `<div class="empty"><b>${n ? "No matches" : "Nothing tracked yet"}</b>${n ? "Try a different search or filter." : 'Choose "Track a product" to add your first one.'}</div>`;
+  list.forEach(p => { const el = document.querySelector(`[data-spark="${p.id}"]`); if (el && hist[p.id]) el.innerHTML = spark(hist[p.id]); });
+}
+function card(p) {
+  const c = Number(p.current_price), t = Number(p.target_price), hit = c <= t;
+  const pct = Math.min(100, Math.round(t / c * 100));
+  const img = p.image_url ? `<img src="${esc(p.image_url)}" alt="" loading="lazy" onerror="this.replaceWith('📦')">` : "📦";
+  return `<article class="card ${hit ? "hit" : ""}">
+    <button class="open" onclick="openDrawer(${p.id})" aria-label="View price history for ${esc(p.product_name)}">
+      <div class="thumb">${img}</div>
+      <div class="name">${esc(p.product_name || "Unnamed product")}</div>
+      <div class="nums"><span class="price">${inr(c)}</span><span class="tgt">Target ${inr(t)}</span></div>
+      <div class="gauge"><b style="width:${pct}%"></b></div>
+      <div class="gtxt">${hit ? "At or below your target — time to buy" : Math.round(gap(p) * 100) + "% above your target"}</div>
+      <div class="spark" data-spark="${p.id}"></div>
+    </button>
+    <button class="btn alt check" onclick="refreshProduct(${p.id}, this)">Check price now</button>
+  </article>`;
+}
+function spark(h) {
+  if (!h || h.length < 2) return "Price history appears after two checks.";
+  const v = h.map(x => Number(x.price)), lo = Math.min(...v), hi = Math.max(...v), r = hi - lo || 1;
+  const pts = v.map((y, i) => `${(i / (v.length - 1) * 100).toFixed(1)},${(30 - (y - lo) / r * 26).toFixed(1)}`).join(" ");
+  return `<svg viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.8" vector-effect="non-scaling-stroke"/></svg>`;
+}
+
+/* ---------- Filters ---------- */
+document.addEventListener("click", e => {
+  const b = e.target.closest(".seg button"); if (!b) return;
+  view.filter = b.dataset.f;
+  document.querySelectorAll(".seg button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  render();
+});
+
+/* ---------- Drawer + chart ---------- */
+function chart(h, target) {
+  const W = 640, H = 260, L = 60, R = 16, T = 16, B = 30, v = h.map(x => Number(x.price));
+  let lo = Math.min(...v, target), hi = Math.max(...v, target); if (hi === lo) { hi++; lo--; }
+  const pad = (hi - lo) * .15; lo -= pad; hi += pad;
+  const X = i => h.length === 1 ? (L + W - R) / 2 : L + (W - L - R) * i / (h.length - 1), Y = n => T + (H - T - B) * (1 - (n - lo) / (hi - lo));
+  const line = v.map((n, i) => `${X(i)},${Y(n)}`).join(" ");
+  const area = h.length > 1 ? `<polygon points="${X(0)},${H - B} ${line} ${X(h.length - 1)},${H - B}" fill="#EBB80F" opacity=".18"/>` : "";
+  const ticks = [lo + pad, (lo + hi) / 2, hi - pad].map(n => `<line x1="${L}" x2="${W - R}" y1="${Y(n)}" y2="${Y(n)}" stroke="#D5DBD0"/><text x="${L - 8}" y="${Y(n) + 4}" text-anchor="end" font-size="11" fill="#566470">${inr(Math.round(n))}</text>`).join("");
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" id="cv" role="img" aria-label="Price history chart">
+    ${ticks}${area}
+    <line x1="${L}" x2="${W - R}" y1="${Y(target)}" y2="${Y(target)}" stroke="#1B8A5A" stroke-width="1.6" stroke-dasharray="6 4"/>
+    <text x="${W - R}" y="${Y(target) - 6}" text-anchor="end" font-size="11" font-weight="600" fill="#1B8A5A">Target ${inr(target)}</text>
+    <polyline points="${line}" fill="none" stroke="#13212C" stroke-width="2.4" stroke-linejoin="round"/>
+    ${v.map((n, i) => `<circle cx="${X(i)}" cy="${Y(n)}" r="${h.length > 25 ? 0 : 3.5}" fill="#13212C"/>`).join("")}
+    <text x="${L}" y="${H - 8}" font-size="11" fill="#566470">${when(h[0].checked_at)}</text>
+    <text x="${W - R}" y="${H - 8}" text-anchor="end" font-size="11" fill="#566470">${when(h[h.length - 1].checked_at)}</text>
+    <rect x="${L}" y="0" width="${W - L - R}" height="${H}" fill="transparent" id="hit"/>
+  </svg><div class="tip" id="tip"></div></div>`;
+}
+function openDrawer(id, keep) {
+  const p = products.find(x => x.id === id); if (!p) return;
+  if (!keep) lastFocus = document.activeElement;
+  openId = id;
+  const h = hist[id], t = Number(p.target_price), c = Number(p.current_price);
+  let body;
+  if (!h) body = '<p class="tgt">Loading price history…</p>';
+  else if (!h.length) body = '<p class="tgt">No price checks recorded yet.</p>';
+  else body = chart(h, t) + `<ul class="hist">${h.slice(-8).reverse().map(x => `<li><span>${when(x.checked_at)}</span><b>${inr(x.price)}</b></li>`).join("")}</ul>`;
+  const low = h && h.length ? inr(Math.min(...h.map(x => Number(x.price)))) : "—";
+  const url = /^https?:\/\//i.test(p.product_url) ? p.product_url : "https://" + p.product_url;
+  $("drawer").innerHTML = `<button class="dx" onclick="closeDrawer()" aria-label="Close">✕</button>
+    <h2>${esc(p.product_name)}</h2>
+    <div class="facts"><div><span>Current</span><b>${inr(c)}</b></div><div><span>Your target</span><b>${inr(t)}</b></div><div><span>Lowest seen</span><b>${low}</b></div></div>
+    ${body}
+    <div class="acts"><button class="btn" onclick="refreshProduct(${id}, this)">Check price now</button><a class="btn alt" href="${esc(url)}" target="_blank" rel="noopener">View on Amazon</a></div>`;
+  $("drawer").classList.add("on"); $("scrim").classList.add("on"); $("drawer").setAttribute("aria-hidden", "false");
+  if (!keep) $("drawer").querySelector(".dx").focus();
+  const hit = $("hit"); if (hit && h) {
+    hit.addEventListener("pointermove", e => {
+      const svg = $("cv"), r = svg.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * 640;
+      const i = Math.max(0, Math.min(h.length - 1, Math.round((x - 60) / (640 - 76) * (h.length - 1))));
+      const tip = $("tip"); tip.style.display = "block"; tip.textContent = `${inr(h[i].price)} · ${when(h[i].checked_at)}`;
+      tip.style.left = Math.max(70, Math.min(r.width - 70, e.clientX - r.left)) + "px"; tip.style.top = (e.clientY - r.top) + "px";
     });
-    google.accounts.id.renderButton(
-      document.getElementById("googleSignInBtn"),
-      { theme: "filled_black", size: "large", shape: "pill" }
-    );
-
-    // Agar pehle se login tha (saved in browser), auto-login kar do
-    const saved = localStorage.getItem("pricewatch_user");
-    if (saved) {
-      currentUser = JSON.parse(saved);
-      showDashboard();
-    }
-  };
-
-  // Jab Google se login successful ho jaye, ye function chalta hai
-  async function handleGoogleLogin(response) {
-    const idToken = response.credential;   // Google ka ID token
-
-    try {
-      const res = await fetch(`${API_BASE}/auth/google`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: idToken })
-      });
-      if (!res.ok) throw new Error("Login failed");
-      const data = await res.json();
-
-      currentUser = { email: data.email, name: data.name, picture: data.picture };
-      localStorage.setItem("pricewatch_user", JSON.stringify(currentUser));
-      showDashboard();
-    } catch (err) {
-      alert("Google login failed. Check backend is running.");
-      console.error(err);
-    }
+    hit.addEventListener("pointerleave", () => $("tip").style.display = "none");
   }
+}
+function closeDrawer() {
+  openId = null; $("drawer").classList.remove("on"); $("scrim").classList.remove("on"); $("drawer").setAttribute("aria-hidden", "true");
+  if (lastFocus) lastFocus.focus();
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape" && openId) closeDrawer(); });
 
-  function showDashboard() {
-    document.getElementById("loginGate").style.display = "none";
-    document.getElementById("dashboardMain").style.display = "block";
-    const chip = document.getElementById("userChip");
-    chip.style.display = "flex";
-    document.getElementById("userName").textContent = currentUser.name || currentUser.email;
-    const avatar = document.getElementById("userAvatar");
-    if (currentUser.picture) {
-      avatar.src = currentUser.picture;
-      avatar.style.display = "inline-block";
-    } else {
-      avatar.style.display = "none";
-    }
-    loadProducts();
-  }
-
-  function logout() {
-    localStorage.removeItem("pricewatch_user");
-    currentUser = null;
-    location.reload();
-  }
-
-  // ============================================================
-  // PRODUCTS (scoped to currentUser.email)
-  // ============================================================
-  async function loadProducts() {
-    const grid = document.getElementById("grid");
-    try {
-      const response = await fetch(`${API_BASE}/products?email=${encodeURIComponent(currentUser.email)}`);
-      const products = await response.json();
-
-      if (products.length === 0) {
-        grid.innerHTML = `<div class="empty-state">No products tracked yet. Click "Track new product" to add one.</div>`;
-        return;
-      }
-      grid.innerHTML = products.map(renderCard).join("");
-    } catch (err) {
-      grid.innerHTML = `<div class="empty-state">⚠️ Could not reach backend.</div>`;
-      console.error(err);
-    }
-  }
-
-  function renderCard(product) {
-    const current = parseFloat(product.current_price);
-    const target = parseFloat(product.target_price);
-    const hit = current <= target;
-    const imgTag = product.image_url
-      ? `<img src="${product.image_url}" alt="${product.product_name}" onerror="this.parentElement.innerHTML='📦'">`
-      : '📦';
-    return `
-      <div class="card ${hit ? 'hit' : 'hot'}">
-        <div class="tag-corner">${hit ? '🎯 TARGET HIT' : '↓ TRACKING'}</div>
-        <div class="thumb">${imgTag}</div>
-        <div class="name">${product.product_name || 'Unnamed product'}</div>
-        <div class="cat mono">ID: ${product.id}</div>
-        <div class="row">
-          <span class="price ${hit ? 'hit' : ''} mono">₹${current.toLocaleString('en-IN')}</span>
-          <span class="delta">target ₹${target.toLocaleString('en-IN')}</span>
-        </div>
-        <button class="refresh-btn" onclick="refreshProduct(${product.id})">🔄 Check price now</button>
-      </div>
-    `;
-  }
-
-  function togglePanel(){ document.getElementById('addPanel').classList.toggle('open'); }
-
-  async function addProduct() {
-    const url = document.getElementById("urlInput").value.trim();
-    const target = document.getElementById("priceInput").value.trim();
-    const statusMsg = document.getElementById("statusMsg");
-
-    if (!url || !target) {
-      statusMsg.textContent = "Please fill both fields.";
-      statusMsg.className = "status-msg error";
-      return;
-    }
-    statusMsg.textContent = "Adding product, checking price...";
-    statusMsg.className = "status-msg loading";
-
-    try {
-      const response = await fetch(`${API_BASE}/products?email=${encodeURIComponent(currentUser.email)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product_url: url, target_price: parseFloat(target) })
-      });
-      if (!response.ok) throw new Error("Request failed");
-
-      statusMsg.textContent = "Product added!";
-      statusMsg.className = "status-msg";
-      document.getElementById("urlInput").value = "";
-      document.getElementById("priceInput").value = "";
-      loadProducts();
-    } catch (err) {
-      statusMsg.textContent = "⚠️ Could not add product.";
-      statusMsg.className = "status-msg error";
-      console.error(err);
-    }
-  }
-
-  async function refreshProduct(id) {
-    try {
-      await fetch(`${API_BASE}/products/${id}/refresh`, { method: "POST" });
-      loadProducts();
-    } catch (err) {
-      alert("Could not refresh price.");
-    }
-  }
+/* ---------- Actions ---------- */
+function togglePanel() {
+  const o = $("addPanel").classList.toggle("open");
+  $("addToggle").setAttribute("aria-expanded", o); if (o) $("urlInput").focus();
+}
+async function addProduct(e) {
+  e.preventDefault();
+  const msg = $("statusMsg"); let url = $("urlInput").value.trim();
+  const target = parseFloat($("priceInput").value.replace(/[₹,\s]/g, ""));
+  const bad = m => { msg.textContent = m; msg.className = "msg err"; };
+  if (!url) return bad("Paste an Amazon product link.");
+  if (!/^https?:\/\//i.test(url)) url = "https://" + url.replace(/^\/+/, "");
+  if (!/(amazon\.|amzn\.)/i.test(url)) return bad("That doesn't look like an Amazon link.");
+  if (!(target > 0)) return bad("Enter a target price above ₹0.");
+  $("addBtn").disabled = true; $("addBtn").textContent = "Adding…"; msg.className = "msg"; msg.textContent = "Fetching the current price…";
+  try {
+    await api("/products?email=" + encodeURIComponent(currentUser.email), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ product_url: url, target_price: target }) });
+    $("urlInput").value = ""; $("priceInput").value = ""; msg.textContent = "";
+    toast("Product added to your watchlist."); await loadProducts();
+  } catch (err) { bad("Couldn't add this product. Check the link and try again."); }
+  $("addBtn").disabled = false; $("addBtn").textContent = "Start tracking";
+}
+async function refreshProduct(id, btn) {
+  const label = btn.textContent; btn.disabled = true; btn.textContent = "Checking…";
+  try {
+    const r = await api(`/products/${id}/refresh`, { method: "POST" });
+    products = await api("/products?email=" + encodeURIComponent(currentUser.email));
+    await loadHist(id); render();
+    toast(r.target_hit ? `Target reached at ${inr(r.new_price)} — alert emailed.` : `Checked: now ${inr(r.new_price)}.`);
+  } catch (err) { toast("Couldn't check the price. Try again in a moment."); btn.disabled = false; btn.textContent = label; }
+}
 </script>
-
 </body>
 </html>
