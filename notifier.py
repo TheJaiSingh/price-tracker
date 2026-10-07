@@ -6,12 +6,29 @@ ke sath (HTML email, plain text nahi).
 """
 
 import os
+import socket
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "your_email@gmail.com")
-SENDER_APP_PASSWORD = os.environ.get("SENDER_APP_PASSWORD", "your_16_digit_app_password")
+SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "js7936574@gmail.com")
+SENDER_APP_PASSWORD = os.environ.get("SENDER_APP_PASSWORD", "jgof hvfx fpwx ojfb")
+
+# ---------------------------------------------------------------------------
+# FIX: Railway (aur kai cloud hosts) mein IPv6 se Gmail tak connect karne mein
+# "Network is unreachable" error aata hai, kyunki unka IPv6 route nahi hota.
+# Ye code DNS lookup ko IPv4-only force karta hai, taaki SMTP connection
+# hamesha IPv4 use kare.
+# ---------------------------------------------------------------------------
+_original_getaddrinfo = socket.getaddrinfo
+
+
+def _ipv4_only_getaddrinfo(*args, **kwargs):
+    responses = _original_getaddrinfo(*args, **kwargs)
+    return [r for r in responses if r[0] == socket.AF_INET]
+
+
+socket.getaddrinfo = _ipv4_only_getaddrinfo
 
 
 def send_price_alert(product_name: str, current_price: float, target_price: float,
