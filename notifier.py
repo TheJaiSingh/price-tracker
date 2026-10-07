@@ -13,16 +13,20 @@ Env variables (Railway -> Variables):
 import os
 import requests
 
-BREVO_API_KEY = os.environ.get("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")
-SENDER_EMAIL = os.environ.get("sjai4247@gmail.com")
+def _env(name):
+    v = os.environ.get(name)
+    return v.strip().strip('"').strip("'") if v else None
 SENDER_NAME = "PriceWatch"
 BREVO_URL = "https://api.brevo.com/v3/smtp/email"
 
 
 def send_price_alert(product_name: str, current_price: float, target_price: float,
                      product_url: str, receiver_email: str, image_url: str = None):
+    BREVO_API_KEY = _env("BREVO_API_KEY")
+    SENDER_EMAIL = _env("SENDER_EMAIL")
     if not BREVO_API_KEY or not SENDER_EMAIL:
-        print("[notifier] Missing BREVO_API_KEY or SENDER_EMAIL env variable")
+        print(f"[notifier] DEBUG key set: {bool(BREVO_API_KEY)}, sender set: {bool(SENDER_EMAIL)}")
+        print("[notifier] DEBUG env names:", sorted(os.environ.keys()))
         return False
 
     subject = f"🎯 Price Drop Alert: {product_name}"
