@@ -1,42 +1,36 @@
 """
 notifier.py
 ------------
-Email bhejta hai jab price target hit ho jaye - ab product image
-ke sath (HTML email, plain text nahi).
+Price target hit hone par HTML email (product image ke sath) bhejta hai.
+Ab Gmail SMTP ki jagah Brevo ki HTTPS API use hoti hai, kyunki Railway
+SMTP ports (465/587) block karta hai.
+
+Env variables (Railway -> Variables):
+    BREVO_API_KEY  - Brevo dashboard -> SMTP & API -> API keys
+    SENDER_EMAIL   - wahi email jo Brevo mein "Senders" mein verified hai
 """
 
 import os
-import socket
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import requests
 
-SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "js7936574@gmail.com")
-SENDER_APP_PASSWORD = os.environ.get("SENDER_APP_PASSWORD", "jgof hvfx fpwx ojfb")
-
-# ---------------------------------------------------------------------------
-# FIX: Railway (aur kai cloud hosts) mein IPv6 se Gmail tak connect karne mein
-# "Network is unreachable" error aata hai, kyunki unka IPv6 route nahi hota.
-# Ye code DNS lookup ko IPv4-only force karta hai, taaki SMTP connection
-# hamesha IPv4 use kare.
-# ---------------------------------------------------------------------------
-_original_getaddrinfo = socket.getaddrinfo
-
-
-def _ipv4_only_getaddrinfo(*args, **kwargs):
-    responses = _original_getaddrinfo(*args, **kwargs)
-    return [r for r in responses if r[0] == socket.AF_INET]
-
-
-socket.getaddrinfo = _ipv4_only_getaddrinfo
+BREVO_API_KEY = os.environ.get("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")
+SENDER_EMAIL = os.environ.get("sjai4247@gmail.com")
+SENDER_NAME = "PriceWatch"
+BREVO_URL = "https://api.brevo.com/v3/smtp/email"
 
 
 def send_price_alert(product_name: str, current_price: float, target_price: float,
-                      product_url: str, receiver_email: str, image_url: str = None):
+                     product_url: str, receiver_email: str, image_url: str = None):
+    if not BREVO_API_KEY or not SENDER_EMAIL:
+        print("[notifier] Missing BREVO_API_KEY or SENDER_EMAIL env variable")
+        return False
+
     subject = f"🎯 Price Drop Alert: {product_name}"
 
-    # HTML email body - image_url ko <img> tag mein daal rahe hain
-    image_html = f'<img src="{image_url}" width="200" style="border-radius:8px; margin-bottom:16px;">' if image_url else ""
+    image_html = (
+        f'<img src="{image_url}" width="200" style="border-radius:8px; margin-bottom:16px;">'
+        if image_url else ""
+    )
 
     html_body = f"""
     <html>
@@ -59,18 +53,25 @@ def send_price_alert(product_name: str, current_price: float, target_price: floa
     </html>
     """
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = SENDER_EMAIL
-    msg["To"] = receiver_email
-    msg.attach(MIMEText(html_body, "html"))
+    payload = {
+        "sender": {"name": SENDER_NAME, "email": SENDER_EMAIL},
+        "to": [{"email": receiver_email}],
+        "subject": subject,
+        "htmlContent": html_body,
+    }
+    headers = {
+        "api-key": BREVO_API_KEY,
+        "accept": "application/json",
+        "content-type": "application/json",
+    }
 
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(SENDER_EMAIL, SENDER_APP_PASSWORD)
-            server.sendmail(SENDER_EMAIL, receiver_email, msg.as_string())
-        print(f"[notifier] Email sent to {receiver_email} for {product_name}")
-        return True
+        resp = requests.post(BREVO_URL, json=payload, headers=headers, timeout=15)
+        if resp.status_code in (200, 201, 202):
+            print(f"[notifier] Email sent to {receiver_email} for {product_name}")
+            return True
+        print(f"[notifier] Brevo API error {resp.status_code}: {resp.text}")
+        return False
     except Exception as e:
         print(f"[notifier] Failed to send email: {e}")
         return False
