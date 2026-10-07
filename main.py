@@ -4,11 +4,12 @@ main.py
 FastAPI backend with Google Sign-In.
 
 Endpoints:
-1. POST /auth/google              -> login with Google, creates/finds user
-2. POST /products?email=...       -> add product for a specific user
-3. GET  /products?email=...       -> list that user's products
-4. GET  /products/{id}/history    -> price history for one product
-5. POST /products/{id}/refresh    -> re-check price, email alert if target hit
+1. POST   /auth/google              -> login with Google, creates/finds user
+2. POST   /products?email=...       -> add product for a specific user
+3. GET    /products?email=...       -> list that user's products
+4. GET    /products/{id}/history    -> price history for one product
+5. POST   /products/{id}/refresh    -> re-check price, email alert if target hit
+6. DELETE /products/{id}?email=...  -> delete a product (only the owner can)
 
 Run: uvicorn main:app --reload
 Docs: http://127.0.0.1:8000/docs
@@ -17,11 +18,11 @@ Docs: http://127.0.0.1:8000/docs
 import os
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import mysql.connector
-from scraper import get_amazon_price
+
+from scraper import fetch_product
 from notifier import send_price_alert
 from auth import verify_google_token
 
@@ -35,9 +36,6 @@ app.add_middleware(
 )
 
 # ---------- Database Connection Settings ----------
-# os.environ.get(KEY, default) -> Railway pe ye values "Environment Variables"
-# se aayengi. Local testing ke liye, default value tera pehle wala password
-# use kar lega agar env variable set nahi hai.
 DB_CONFIG = {
     "host": os.environ.get("DB_HOST", "localhost"),
     "user": os.environ.get("DB_USER", "root"),
@@ -53,7 +51,7 @@ def get_db_connection():
 
 # ---------- Request body shapes ----------
 class GoogleLogin(BaseModel):
-    token: str   # Google se mila hua ID token (frontend se aayega)
+    token: str
 
 
 class ProductCreate(BaseModel):
@@ -73,13 +71,10 @@ def google_login(payload: GoogleLogin):
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-
-    # Check karo user pehle se hai kya
     cursor.execute("SELECT * FROM users WHERE google_id = %s", (user_info["google_id"],))
     user = cursor.fetchone()
 
     if not user:
-        # Naya user hai, create karo
         cursor.execute(
             "INSERT INTO users (google_id, email, name) VALUES (%s, %s, %s)",
             (user_info["google_id"], user_info["email"], user_info["name"]),
@@ -119,14 +114,16 @@ def get_user_id_by_email(email: str):
 @app.post("/products")
 def add_product(product: ProductCreate, email: str = Query(...)):
     user_id = get_user_id_by_email(email)
-    price, name, image_url = get_amazon_price(product.product_url)
+
+    info = fetch_product(product.product_url)
+    price, name, image_url, clean_link = info["price"], info["name"], info["image"], info["url"]
 
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
         "INSERT INTO products (user_id, product_url, product_name, image_url, target_price, current_price) "
         "VALUES (%s, %s, %s, %s, %s, %s)",
-        (user_id, product.product_url, name, image_url, product.target_price, price),
+        (user_id, clean_link, name, image_url, product.target_price, price),
     )
     product_id = cursor.lastrowid
     cursor.execute(
@@ -137,7 +134,7 @@ def add_product(product: ProductCreate, email: str = Query(...)):
     conn.close()
 
     if price <= product.target_price:
-        send_price_alert(name, price, product.target_price, product.product_url, email, image_url)
+        send_price_alert(name, price, product.target_price, clean_link, email, image_url)
 
     return {"id": product_id, "name": name, "current_price": price, "image_url": image_url}
 
@@ -148,7 +145,6 @@ def add_product(product: ProductCreate, email: str = Query(...)):
 @app.get("/products")
 def list_products(email: str = Query(...)):
     user_id = get_user_id_by_email(email)
-
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
@@ -195,12 +191,23 @@ def refresh_price(product_id: int):
         conn.close()
         raise HTTPException(status_code=404, detail="Product not found")
 
-    new_price, _, new_image = get_amazon_price(product["product_url"])
+    info = fetch_product(product["product_url"], previous_price=float(product["current_price"]))
+    new_price = info["price"]
 
-    cursor.execute(
-        "UPDATE products SET current_price = %s, image_url = %s WHERE id = %s",
-        (new_price, new_image, product_id),
-    )
+    if info["real"]:
+        # Real page mila: naam aur image bhi update karo
+        cursor.execute(
+            "UPDATE products SET current_price = %s, product_name = %s, image_url = %s WHERE id = %s",
+            (new_price, info["name"], info["image"] or product["image_url"], product_id),
+        )
+        new_image = info["image"] or product["image_url"]
+    else:
+        # Scraping fail: purana naam/image rakho, sirf price update
+        cursor.execute(
+            "UPDATE products SET current_price = %s WHERE id = %s", (new_price, product_id)
+        )
+        new_image = product["image_url"]
+
     cursor.execute(
         "INSERT INTO price_history (product_id, price) VALUES (%s, %s)", (product_id, new_price)
     )
@@ -211,11 +218,36 @@ def refresh_price(product_id: int):
     hit_target = new_price <= float(product["target_price"])
     if hit_target:
         send_price_alert(
-            product["product_name"], new_price, float(product["target_price"]),
+            info["name"] if info["real"] else product["product_name"],
+            new_price, float(product["target_price"]),
             product["product_url"], product["email"], new_image,
         )
 
     return {"id": product_id, "new_price": new_price, "target_hit": hit_target}
+
+
+# ============================================================
+# 6. DELETE PRODUCT (only the owner can delete)
+# ============================================================
+@app.delete("/products/{product_id}")
+def delete_product(product_id: int, email: str = Query(...)):
+    user_id = get_user_id_by_email(email)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id FROM products WHERE id = %s AND user_id = %s", (product_id, user_id)
+    )
+    if not cursor.fetchone():
+        cursor.close()
+        conn.close()
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    cursor.execute("DELETE FROM price_history WHERE product_id = %s", (product_id,))
+    cursor.execute("DELETE FROM products WHERE id = %s", (product_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return {"deleted": product_id}
 
 
 # ============================================================

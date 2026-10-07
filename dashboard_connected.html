@@ -62,7 +62,7 @@ main{display:none;max-width:1180px;margin:0 auto;padding:12px 5vw 80px}
 .gtxt{font-size:12.5px;color:var(--ink2);margin-top:6px}
 .spark{height:34px;margin-top:8px;color:var(--ink2);font-size:12px}
 .spark svg{width:100%;height:34px;display:block}
-.card .check{margin:8px 16px 16px}
+.crow{display:flex;gap:8px;margin:8px 16px 16px}.crow .btn:first-child{flex:1}.del{padding:12px 14px}.del.sure{background:#B3362B;color:#fff;border-color:#B3362B}
 .skel{height:330px;border-radius:14px;background:linear-gradient(90deg,#E3E8DF,#F1F4EE,#E3E8DF);background-size:200% 100%;animation:sh 1.3s infinite}
 @keyframes sh{to{background-position:-200% 0}}
 .empty{grid-column:1/-1;text-align:center;padding:60px 16px;color:var(--ink2)}
@@ -210,7 +210,7 @@ function render() {
 function card(p) {
   const c = Number(p.current_price), t = Number(p.target_price), hit = c <= t;
   const pct = Math.min(100, Math.round(t / c * 100));
-  const img = p.image_url ? `<img src="${esc(p.image_url)}" alt="" loading="lazy" onerror="this.replaceWith('📦')">` : "📦";
+  const img = p.image_url ? `<img src="${esc(p.image_url)}" alt="" loading="lazy" onerror="this.replaceWith('📦')" onload="if(this.naturalWidth<20)this.replaceWith('📦')">` : "📦";
   return `<article class="card ${hit ? "hit" : ""}">
     <button class="open" onclick="openDrawer(${p.id})" aria-label="View price history for ${esc(p.product_name)}">
       <div class="thumb">${img}</div>
@@ -220,7 +220,7 @@ function card(p) {
       <div class="gtxt">${hit ? "At or below your target — time to buy" : Math.round(gap(p) * 100) + "% above your target"}</div>
       <div class="spark" data-spark="${p.id}"></div>
     </button>
-    <button class="btn alt check" onclick="refreshProduct(${p.id}, this)">Check price now</button>
+    <div class="crow"><button class="btn alt" onclick="refreshProduct(${p.id}, this)">Check price now</button><button class="btn alt del" onclick="deleteProduct(${p.id}, this)" aria-label="Delete ${esc(p.product_name)}" title="Delete">🗑</button></div>
   </article>`;
 }
 function spark(h) {
@@ -273,7 +273,7 @@ function openDrawer(id, keep) {
     <h2>${esc(p.product_name)}</h2>
     <div class="facts"><div><span>Current</span><b>${inr(c)}</b></div><div><span>Your target</span><b>${inr(t)}</b></div><div><span>Lowest seen</span><b>${low}</b></div></div>
     ${body}
-    <div class="acts"><button class="btn" onclick="refreshProduct(${id}, this)">Check price now</button><a class="btn alt" href="${esc(url)}" target="_blank" rel="noopener">View on Amazon</a></div>`;
+    <div class="acts"><button class="btn" onclick="refreshProduct(${id}, this)">Check price now</button><a class="btn alt" href="${esc(url)}" target="_blank" rel="noopener">View on Amazon</a><button class="btn alt del" onclick="deleteProduct(${id}, this)">Delete</button></div>`;
   $("drawer").classList.add("on"); $("scrim").classList.add("on"); $("drawer").setAttribute("aria-hidden", "false");
   if (!keep) $("drawer").querySelector(".dx").focus();
   const hit = $("hit"); if (hit && h) {
@@ -313,6 +313,16 @@ async function addProduct(e) {
     toast("Product added to your watchlist."); await loadProducts();
   } catch (err) { bad("Couldn't add this product. Check the link and try again."); }
   $("addBtn").disabled = false; $("addBtn").textContent = "Start tracking";
+}
+function deleteProduct(id, btn) {
+  if (!btn.classList.contains("sure")) {
+    const old = btn.innerHTML; btn.classList.add("sure"); btn.textContent = "Sure?";
+    setTimeout(() => { if (document.body.contains(btn)) { btn.classList.remove("sure"); btn.innerHTML = old; } }, 3000);
+    return;
+  }
+  api(`/products/${id}?email=` + encodeURIComponent(currentUser.email), { method: "DELETE" })
+    .then(() => { products = products.filter(p => p.id !== id); delete hist[id]; if (openId === id) closeDrawer(); render(); toast("Product deleted."); })
+    .catch(() => toast("Couldn't delete. Try again."));
 }
 async function refreshProduct(id, btn) {
   const label = btn.textContent; btn.disabled = true; btn.textContent = "Checking…";
