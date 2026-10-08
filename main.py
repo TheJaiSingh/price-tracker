@@ -161,8 +161,9 @@ def maybe_alert(cur, pr, new, name, image):
     return sent
 
 
-def check_product(conn, product_id):
-    """Price dobara scrape karo, save karo, zaroorat ho to email."""
+def check_product(conn, product_id, auto=False):
+    """Price dobara scrape karo, save karo, zaroorat ho to email.
+    auto=True (scheduler): asli price na mile to kuch nahi badalta (nakli price se jhootha alert nahi)."""
     cur = conn.cursor(dictionary=True)
     cur.execute(
         "SELECT p.*, u.email FROM products p JOIN users u ON p.user_id = u.id WHERE p.id = %s",
@@ -174,6 +175,10 @@ def check_product(conn, product_id):
         return None
 
     info = fetch_product(pr["product_url"], previous_price=float(pr["current_price"]))
+    if auto and not info["real"]:
+        cur.close()
+        return {"id": product_id, "new_price": float(pr["current_price"]), "target_hit": False,
+                "alert_sent": False, "real": False, "skipped": True}
     new = info["price"]
     if info["real"]:
         cur.execute(
@@ -495,7 +500,7 @@ def run_all_checks():
         cur.close()
         for pid in ids:
             try:
-                check_product(conn, pid)
+                check_product(conn, pid, auto=True)
             except Exception as e:
                 print(f"[scheduler] product {pid} failed: {e}")
             time.sleep(2)

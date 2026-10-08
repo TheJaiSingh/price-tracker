@@ -44,9 +44,14 @@ def _send(to_email: str, subject: str, html_body: str) -> bool:
     return False
 
 
+def _short(text, n):
+    text = str(text)
+    return text if len(text) <= n else text[: n - 1].rstrip() + "…"
+
+
 def send_price_alert(product_name, current_price, target_price, product_url, receiver_email,
                      image_url=None, reason=None, site="amazon"):
-    name = _html.escape(str(product_name))
+    name = _html.escape(_short(product_name, 110))
     shop = "Flipkart" if site == "flipkart" else "Amazon"
     img = (f'<img src="{_html.escape(image_url)}" width="200" style="border-radius:8px;margin-bottom:16px;">'
            if image_url else "")
@@ -68,7 +73,7 @@ def send_price_alert(product_name, current_price, target_price, product_url, rec
         <p style="margin-top:24px;font-size:12px;color:#999;">— PriceWatch (Price Tracker)</p>
       </div>
     </body></html>"""
-    return _send(receiver_email, f"🎯 Price Drop Alert: {product_name}", body)
+    return _send(receiver_email, f"🎯 Price Drop Alert: {_short(product_name, 55)}", body)
 
 
 def send_weekly_summary(receiver_email, user_name, rows):
