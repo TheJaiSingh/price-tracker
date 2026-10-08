@@ -20,7 +20,7 @@ header{display:flex;justify-content:space-between;align-items:center;padding:20p
 .chip{display:none;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);padding:6px 8px 6px 6px;border-radius:99px;font-weight:600;font-size:13px}
 .chip img{width:26px;height:26px;border-radius:50%}
 .chip button{background:none;border:0;color:var(--ink2);text-decoration:underline;font-size:13px}
-#loginGate{display:block;padding:0;background:#070B14}
+#loginGate{display:block;padding:0;background:#0B111C}
 html{scroll-behavior:smooth}
 a.btn{text-decoration:none;display:inline-block}
 .btn.y{background:var(--tag);color:var(--ink)}.btn.y:hover{background:#F7C928}
@@ -153,6 +153,14 @@ main{display:none;max-width:1180px;margin:0 auto;padding:12px 5vw 80px}
 .gtxt{font-size:12.5px;color:var(--ink2);margin-top:6px}
 .spark{height:34px;margin-top:8px;color:var(--ink2);font-size:12px}
 .spark svg{width:100%;height:34px;display:block}
+.bdgs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;min-height:22px}
+.bdg{font-size:11.5px;font-weight:700;border-radius:99px;padding:3px 9px;background:#E3E8DF;color:#33413A}.bdg.low{background:#FFF1B8;color:#6B5200}.bdg.fk{background:#DCEBFF;color:#1F4E8C}
+.tools .btn{padding:10px 14px;font-size:14px}
+.alertbox{background:var(--bg);border-radius:12px;padding:14px;margin:16px 0}
+.alertbox h4{margin:0 0 10px;font:700 16px 'Bricolage Grotesque',sans-serif}
+.alertbox .ar{display:flex;gap:10px;flex-wrap:wrap}.alertbox input{flex:1 1 120px;min-width:0;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#fff}
+.alertbox label{flex:1 1 120px;font-size:12px;color:var(--ink2)}.alertbox label input{width:100%;margin-top:4px}
+.alertbox small{display:block;margin-top:10px;color:var(--ink2);font-size:12.5px}
 .crow{display:flex;gap:8px;margin:8px 16px 16px}.crow .btn:first-child{flex:1}.del{padding:12px 14px}.del.sure{background:#B3362B;color:#fff;border-color:#B3362B}
 .skel{height:330px;border-radius:14px;background:linear-gradient(90deg,#E3E8DF,#F1F4EE,#E3E8DF);background-size:200% 100%;animation:sh 1.3s infinite}
 @keyframes sh{to{background-position:-200% 0}}
@@ -177,6 +185,7 @@ main{display:none;max-width:1180px;margin:0 auto;padding:12px 5vw 80px}
 #toast div{background:var(--ink);color:#fff;padding:11px 18px;border-radius:10px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.2)}
 @media(max-width:620px){header{flex-direction:row}.facts{grid-template-columns:1fr 1fr 1fr}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
 </style>
 </head>
 <body>
@@ -212,7 +221,7 @@ main{display:none;max-width:1180px;margin:0 auto;padding:12px 5vw 80px}
       <div class="scene">
         <h1 class="split hero" data-d="l">PriceWatch</h1>
         <p class="tg">Buy at Your Price</p>
-        <p>Track Amazon. Get alerted.</p>
+        <p>Track Amazon, Flipkart. Get alerted.</p>
         <a class="btn y" href="#login">Start tracking</a>
       </div>
       <div class="scene">
@@ -261,8 +270,9 @@ main{display:none;max-width:1180px;margin:0 auto;padding:12px 5vw 80px}
 
   <div class="add" id="addPanel"><div>
     <form onsubmit="addProduct(event)">
-      <input id="urlInput" placeholder="Amazon product link" aria-label="Amazon product link" autocomplete="off">
+      <input id="urlInput" placeholder="Amazon or Flipkart link" aria-label="Amazon or Flipkart product link" autocomplete="off">
       <input id="priceInput" class="tp" inputmode="decimal" placeholder="Target price (₹)" aria-label="Target price in rupees">
+      <input id="pctInput" class="tp" inputmode="decimal" placeholder="Or % drop (optional)" aria-label="Alert on percent drop, optional">
       <button class="btn" id="addBtn">Start tracking</button>
       <div class="msg" id="statusMsg" role="status"></div>
     </form>
@@ -280,6 +290,9 @@ main{display:none;max-width:1180px;margin:0 auto;padding:12px 5vw 80px}
       <option value="gap">Closest to target</option>
       <option value="low">Price: low to high</option>
     </select>
+    <button class="btn alt" onclick="checkAll(this)" title="Re-check every product now">↻ Check all</button>
+    <button class="btn alt" onclick="exportCsv()" title="Download price history">⬇ CSV</button>
+    <button class="btn alt" onclick="sendSummary(this)" title="Email me this week's summary">✉ Weekly summary</button>
   </div>
 
   <div class="grid" id="grid"></div>
@@ -445,6 +458,8 @@ function render() {
     `<div class="empty"><b>${n ? "No matches" : "Nothing tracked yet"}</b>${n ? "Try a different search or filter." : 'Choose "Track a product" to add your first one.'}</div>`;
   list.forEach(p => { const el = document.querySelector(`[data-spark="${p.id}"]`); if (el && hist[p.id]) el.innerHTML = spark(hist[p.id]); });
 }
+const siteOf = p => /flipkart|fkrt/i.test(p.product_url || "") ? "Flipkart" : "Amazon";
+const badges = p => `<div class="bdgs"><span class="bdg ${siteOf(p) === "Flipkart" ? "fk" : ""}">${siteOf(p)}</span>${p.checks >= 2 && Number(p.current_price) <= Number(p.lowest_price) ? '<span class="bdg low">★ Lowest price so far</span>' : ""}${p.alert_percent ? `<span class="bdg">${Number(p.alert_percent)}% drop alert</span>` : ""}</div>`;
 function card(p) {
   const c = Number(p.current_price), t = Number(p.target_price), hit = c <= t;
   const pct = Math.min(100, Math.round(t / c * 100));
@@ -452,7 +467,7 @@ function card(p) {
   return `<article class="card ${hit ? "hit" : ""}">
     <button class="open" onclick="openDrawer(${p.id})" aria-label="View price history for ${esc(p.product_name)}">
       <div class="thumb">${img}</div>
-      <div class="name">${esc(p.product_name || "Unnamed product")}</div>
+      ${badges(p)}<div class="name">${esc(p.product_name || "Unnamed product")}</div>
       <div class="nums"><span class="price">${inr(c)}</span><span class="tgt">Target ${inr(t)}</span></div>
       <div class="gauge"><b style="width:${pct}%"></b></div>
       <div class="gtxt">${hit ? "At or below your target — time to buy" : Math.round(gap(p) * 100) + "% above your target"}</div>
@@ -511,7 +526,12 @@ function openDrawer(id, keep) {
     <h2>${esc(p.product_name)}</h2>
     <div class="facts"><div><span>Current</span><b>${inr(c)}</b></div><div><span>Your target</span><b>${inr(t)}</b></div><div><span>Lowest seen</span><b>${low}</b></div></div>
     ${body}
-    <div class="acts"><button class="btn" onclick="refreshProduct(${id}, this)">Check price now</button><a class="btn alt" href="${esc(url)}" target="_blank" rel="noopener">View on Amazon</a><button class="btn alt del" onclick="deleteProduct(${id}, this)">Delete</button></div>`;
+    <div class="alertbox"><h4>Alert settings</h4>
+      <div class="ar"><label>Target price (₹)<input id="eTarget" inputmode="decimal" value="${t}"></label>
+      <label>Or % drop (empty = off)<input id="ePct" inputmode="decimal" value="${p.alert_percent ? Number(p.alert_percent) : ""}"></label></div>
+      <button class="btn" style="margin-top:12px" onclick="saveAlert(${id}, this)">Save alert</button>
+      <small>You get one email per new low, not repeated emails for the same price.</small></div>
+    <div class="acts"><button class="btn" onclick="refreshProduct(${id}, this)">Check price now</button><a class="btn alt" href="${esc(url)}" target="_blank" rel="noopener">View product</a><button class="btn alt del" onclick="deleteProduct(${id}, this)">Delete</button></div>`;
   $("drawer").classList.add("on"); $("scrim").classList.add("on"); $("drawer").setAttribute("aria-hidden", "false");
   if (!keep) $("drawer").querySelector(".dx").focus();
   const hit = $("hit"); if (hit && h) {
@@ -542,15 +562,41 @@ async function addProduct(e) {
   const bad = m => { msg.textContent = m; msg.className = "msg err"; };
   if (!url) return bad("Paste an Amazon product link.");
   if (!/^https?:\/\//i.test(url)) url = "https://" + url.replace(/^\/+/, "");
-  if (!/(amazon\.|amzn\.)/i.test(url)) return bad("That doesn't look like an Amazon link.");
+  if (!/(amazon\.|amzn\.|flipkart\.|fkrt\.)/i.test(url)) return bad("That doesn't look like an Amazon or Flipkart link.");
+  const pct = parseFloat($("pctInput").value); if ($("pctInput").value.trim() && !(pct >= 1 && pct <= 90)) return bad("% drop must be between 1 and 90.");
   if (!(target > 0)) return bad("Enter a target price above ₹0.");
   $("addBtn").disabled = true; $("addBtn").textContent = "Adding…"; msg.className = "msg"; msg.textContent = "Fetching the current price…";
   try {
-    await api("/products?email=" + encodeURIComponent(currentUser.email), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ product_url: url, target_price: target }) });
-    $("urlInput").value = ""; $("priceInput").value = ""; msg.textContent = "";
+    await api("/products?email=" + encodeURIComponent(currentUser.email), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ product_url: url, target_price: target, alert_percent: pct >= 1 ? pct : null }) });
+    $("urlInput").value = ""; $("priceInput").value = ""; $("pctInput").value = ""; msg.textContent = "";
     toast("Product added to your watchlist."); await loadProducts();
   } catch (err) { bad("Couldn't add this product. Check the link and try again."); }
   $("addBtn").disabled = false; $("addBtn").textContent = "Start tracking";
+}
+async function reloadAll() { products = await api("/products?email=" + encodeURIComponent(currentUser.email)); render(); products.forEach(p => loadHist(p.id)); }
+async function saveAlert(id, btn) {
+  const t = parseFloat($("eTarget").value.replace(/[₹,\s]/g, "")), raw = $("ePct").value.trim(), pc = raw === "" ? 0 : parseFloat(raw);
+  if (!(t > 0)) return toast("Enter a valid target price.");
+  if (isNaN(pc) || pc < 0 || pc > 90 || (pc > 0 && pc < 1)) return toast("% drop must be 1 to 90, or empty.");
+  btn.disabled = true;
+  try {
+    const r = await api(`/products/${id}?email=` + encodeURIComponent(currentUser.email), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ target_price: t, alert_percent: pc }) });
+    products = await api("/products?email=" + encodeURIComponent(currentUser.email)); render(); openDrawer(id, true);
+    toast(r.alert_sent ? "Saved. Alert emailed." : "Alert settings saved.");
+  } catch (e) { toast("Couldn't save. Try again."); btn.disabled = false; }
+}
+async function checkAll(btn) {
+  const old = btn.textContent; btn.disabled = true; btn.textContent = "Checking…";
+  try { const r = await api("/products/check-all?email=" + encodeURIComponent(currentUser.email), { method: "POST" }); await reloadAll(); toast(`Checked ${r.checked} product(s). ${r.alerts_sent} alert(s) emailed.`); }
+  catch (e) { toast("Couldn't check all. Try again."); }
+  btn.disabled = false; btn.textContent = old;
+}
+function exportCsv() { location.href = API_BASE + "/export.csv?email=" + encodeURIComponent(currentUser.email); toast("Downloading price history…"); }
+async function sendSummary(btn) {
+  btn.disabled = true;
+  try { const r = await api("/summary/send?email=" + encodeURIComponent(currentUser.email), { method: "POST" }); toast(r.sent ? "Weekly summary sent to your email." : "Add a product first, or check email settings."); }
+  catch (e) { toast("Couldn't send the summary."); }
+  btn.disabled = false;
 }
 function deleteProduct(id, btn) {
   if (!btn.classList.contains("sure")) {
@@ -568,7 +614,7 @@ async function refreshProduct(id, btn) {
     const r = await api(`/products/${id}/refresh`, { method: "POST" });
     products = await api("/products?email=" + encodeURIComponent(currentUser.email));
     await loadHist(id); render();
-    toast(r.target_hit ? `Target reached at ${inr(r.new_price)} — alert emailed.` : `Checked: now ${inr(r.new_price)}.`);
+    toast(r.alert_sent ? `Target reached at ${inr(r.new_price)}. Alert emailed.` : r.target_hit ? `At target (${inr(r.new_price)}). Alert was already sent.` : `Checked: now ${inr(r.new_price)}.`);
   } catch (err) { toast("Couldn't check the price. Try again in a moment."); btn.disabled = false; btn.textContent = label; }
 }
 </script>

@@ -1,20 +1,20 @@
 """
 scraper.py
 -----------
-Amazon product page se REAL name, image aur price nikalta hai.
+Amazon aur Flipkart product page se naam, image aur price nikalta hai.
 
-Amazon cloud servers (jaise Railway) ko aksar block karta hai. Isliye:
-1. Agar SCRAPER_API_KEY env variable set hai, to request ScraperAPI ke
-   through jaati hai (reliable tareeka).
-2. Warna seedha try karta hai.
-3. Price na mile to bhi real NAME (page se ya URL se) aur IMAGE (ASIN se)
-   use hota hai. Sirf price demo mode mein thoda hilta hai.
+Cloud servers (jaise Railway) ko Amazon/Flipkart aksar block karte hain. Isliye:
+1. SCRAPER_API_KEY env variable set ho to request ScraperAPI ke through jaati hai (reliable).
+2. Warna seedha try hota hai.
+3. Price na mile to bhi asli NAME (page ya URL se) aur IMAGE (Amazon ASIN se) use hota hai.
+   Sirf price demo mode mein thoda hilta hai.
 """
 
 import os
 import re
+import json
 import random
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse, unquote, parse_qs
 
 import requests
 from bs4 import BeautifulSoup
@@ -32,15 +32,23 @@ HEADERS = {
 ASIN_RE = re.compile(r"/(?:dp|gp/product|gp/aw/d)/([A-Z0-9]{10})", re.I)
 
 
+def site_of(url: str) -> str:
+    host = urlparse(url if url.lower().startswith("http") else "https://" + url).netloc.lower()
+    return "flipkart" if ("flipkart" in host or "fkrt" in host) else "amazon"
+
+
 def clean_url(url: str) -> str:
-    """Lamba tracking wala link -> https://www.amazon.in/dp/ASIN"""
+    """Tracking hata ke saaf link banata hai."""
     url = url.strip()
     if not url.lower().startswith("http"):
         url = "https://" + url.lstrip("/")
+    parsed = urlparse(url)
+    if site_of(url) == "flipkart":
+        pid = parse_qs(parsed.query).get("pid", [None])[0]
+        return f"https://{parsed.netloc}{parsed.path}" + (f"?pid={pid}" if pid else "")
     m = ASIN_RE.search(url)
-    host = urlparse(url).netloc
-    if m and "amazon" in host:
-        return f"https://{host}/dp/{m.group(1).upper()}"
+    if m and "amazon" in parsed.netloc:
+        return f"https://{parsed.netloc}/dp/{m.group(1).upper()}"
     return url
 
 
@@ -50,10 +58,11 @@ def get_asin(url: str):
 
 
 def name_from_url(url: str):
-    """Link ke slug se naam: .../Samsung-A36-Dark-Blue-128/dp/B0... -> 'Samsung A36 Dark Blue 128'"""
+    """Link ke slug se naam. Amazon: .../Name-Here/dp/ASIN  |  Flipkart: /name-here/p/itm..."""
     parts = [p for p in unquote(urlparse(url).path).split("/") if p]
+    marker = "p" if site_of(url) == "flipkart" else "dp"
     for i, p in enumerate(parts):
-        if p.lower() == "dp" and i > 0:
+        if p.lower() == marker and i > 0:
             slug = parts[i - 1]
             if slug.lower() not in ("gp", "product") and not re.fullmatch(r"[A-Z0-9]{10}", slug):
                 return slug.replace("-", " ").strip()
@@ -77,50 +86,98 @@ def _get_html(url: str) -> str:
     return r.text
 
 
+def _find_product(node):
+    """JSON-LD ke andar Product object dhundta hai."""
+    if isinstance(node, list):
+        for x in node:
+            r = _find_product(x)
+            if r:
+                return r
+    elif isinstance(node, dict):
+        t = node.get("@type")
+        if t == "Product" or (isinstance(t, list) and "Product" in t):
+            return node
+        for v in node.values():
+            if isinstance(v, (list, dict)):
+                r = _find_product(v)
+                if r:
+                    return r
+    return None
+
+
+def _jsonld(soup):
+    for tag in soup.find_all("script", {"type": "application/ld+json"}):
+        try:
+            prod = _find_product(json.loads(tag.string or ""))
+        except Exception:
+            continue
+        if not prod:
+            continue
+        img = prod.get("image")
+        img = img[0] if isinstance(img, list) and img else img
+        offers = prod.get("offers")
+        offers = offers[0] if isinstance(offers, list) and offers else offers
+        price = None
+        if isinstance(offers, dict):
+            price = _to_price(str(offers.get("price") or offers.get("lowPrice") or ""))
+        return price, prod.get("name"), (img if isinstance(img, str) else None)
+    return None, None, None
+
+
 def _parse(html: str):
     low = html.lower()
     if "enter the characters you see below" in low or "api-services-support@amazon.com" in low:
-        raise ValueError("Amazon bot check (captcha)")
+        raise ValueError("Bot check (captcha)")
     soup = BeautifulSoup(html, "html.parser")
 
-    # NAME
     name = None
-    t = soup.find(id="productTitle")
-    if t:
-        name = t.get_text(strip=True)
-    if not name:
-        og = soup.find("meta", {"property": "og:title"})
-        if og and og.get("content"):
-            name = og["content"].strip()
+    for sel in ("#productTitle", "span.VU-ZEz", "span.B_NuCI"):
+        t = soup.select_one(sel)
+        if t and t.get_text(strip=True):
+            name = t.get_text(strip=True)
+            break
 
-    # IMAGE
     image = None
     img = soup.find("img", {"id": "landingImage"})
     if img:
         image = img.get("data-old-hires") or img.get("src")
     if not image:
-        og = soup.find("meta", {"property": "og:image"})
-        if og and og.get("content"):
-            image = og["content"]
+        for sel in ("img.DByuf4", "img._396cs4"):
+            t = soup.select_one(sel)
+            if t and t.get("src"):
+                image = t["src"]
+                break
 
-    # PRICE
     price = None
-    for sel in (".a-price .a-offscreen", "span.a-price-whole",
-                "#priceblock_ourprice", "#priceblock_dealprice"):
+    for sel in (".a-price .a-offscreen", "span.a-price-whole", "#priceblock_ourprice",
+                "#priceblock_dealprice", "div.Nx9bqj", "div._30jeq3"):
         tag = soup.select_one(sel)
         if tag:
             price = _to_price(tag.get_text())
             if price:
                 break
+
+    # JSON-LD / og tags se khali jagah bharo (dono sites ke liye)
+    lp, ln, li = _jsonld(soup)
+    price = price or lp
+    name = name or ln
+    image = image or li
+    if not name:
+        og = soup.find("meta", {"property": "og:title"})
+        name = og["content"].strip() if og and og.get("content") else None
+    if not image:
+        og = soup.find("meta", {"property": "og:image"})
+        image = og["content"] if og and og.get("content") else None
     return price, name, image
 
 
 def fetch_product(url: str, previous_price: float = None) -> dict:
     """
-    Returns: {"price", "name", "image", "url", "real"}
-    real=True matlab price asli Amazon page se mila.
+    Returns: {"price", "name", "image", "url", "real", "site"}
+    real=True matlab price asli page se mila.
     """
     cleaned = clean_url(url)
+    site = site_of(cleaned)
     asin = get_asin(cleaned)
     price = name = image = None
     try:
@@ -130,14 +187,14 @@ def fetch_product(url: str, previous_price: float = None) -> dict:
 
     real = price is not None
     if not name:
-        name = name_from_url(url) or (f"Amazon product {asin}" if asin else "Amazon product")
+        name = name_from_url(url) or (f"Amazon product {asin}" if asin else f"{site.title()} product")
     if not image and asin:
         image = f"https://m.media-amazon.com/images/P/{asin}.01.LZZZZZZZ.jpg"
     if not price:
         print("[scraper] Using demo price")
         price = (round(previous_price * random.uniform(0.96, 1.01), 2)
                  if previous_price else round(random.uniform(999, 15000), 2))
-    return {"price": price, "name": name, "image": image or "", "url": cleaned, "real": real}
+    return {"price": price, "name": name, "image": image or "", "url": cleaned, "real": real, "site": site}
 
 
 def get_amazon_price(product_url: str):
