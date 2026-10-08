@@ -338,6 +338,10 @@ function toast(msg) { const d = document.createElement("div"); d.textContent = m
     const y = clamp((now - t0) / DUR) * E; scrollTo({ top: y, behavior: "instant" });
     if (y >= E - 1 && !endTimer) endTimer = setTimeout(() => { if (auto) { stopAuto(); $("login").scrollIntoView({ behavior: "smooth" }); } }, 1500);
   }
+  /* Log in / Start tracking: auto-scroll roko aur seedha login section par jao */
+  document.querySelectorAll('a[href="#login"]').forEach(a => a.addEventListener("click", e => {
+    e.preventDefault(); stopAuto(); scrollTo({ top: $("login").offsetTop, behavior: "instant" });
+  }));
   let p = 0, intro = 0, last = performance.now();
   function calc() { const r = st.getBoundingClientRect(); p = clamp(-r.top / Math.max(1, r.height - innerHeight)); }
   function render(time) {
@@ -354,7 +358,7 @@ function toast(msg) { const d = document.createElement("div"); d.textContent = m
     birds.forEach(o => { o.el.style.transform += ` scaleY(${(.7 + .3 * Math.sin(time / 140 + o.n * 3)).toFixed(2)})`; });
     scenes.forEach((sc, i) => {
       const lt = p * 3 - i, en = i === 0 ? intro : ease(clamp(lt / .4)), xo = i < 2 ? clamp((lt - .78) / .22) : 0, vis = lt >= 0 && (lt <= 1 || i === 2);
-      sc.style.opacity = vis ? (en * (1 - xo)).toFixed(3) : 0; if (!vis) return;
+      sc.style.opacity = vis ? (en * (1 - xo)).toFixed(3) : 0; sc.style.visibility = vis && en * (1 - xo) > .05 ? "visible" : "hidden"; if (!vis) return;
       sc.style.pointerEvents = "none";
       sc.querySelectorAll(".split").forEach(hd => hd.querySelectorAll(".ch").forEach((c, j) => {
         c.style.transform = `translate(${(1 - en) * -1 * (vw * .3 + j * 40)}px,${-xo * 60}px)`; c.style.opacity = clamp(en * 1.5 - j * .05) * (1 - xo);
