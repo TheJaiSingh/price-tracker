@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PriceWatch — Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400;500;600;700&family=Playfair+Display:wght@600;800&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{--bg:#EDF0EA;--surface:#FBFCFA;--ink:#13212C;--ink2:#566470;--line:#D5DBD0;--tag:#EBB80F;--hit:#1B8A5A;--blue:#2F5D9B}
@@ -20,9 +20,100 @@ header{display:flex;justify-content:space-between;align-items:center;padding:20p
 .chip{display:none;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);padding:6px 8px 6px 6px;border-radius:99px;font-weight:600;font-size:13px}
 .chip img{width:26px;height:26px;border-radius:50%}
 .chip button{background:none;border:0;color:var(--ink2);text-decoration:underline;font-size:13px}
-#loginGate{min-height:68vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
-#loginGate h1{font-size:clamp(34px,6vw,64px);line-height:1.02;letter-spacing:-.02em;max-width:14ch;margin-bottom:16px}
-#loginGate p{color:var(--ink2);max-width:42ch;margin:0 0 28px}
+#loginGate{display:block;padding:0;background:#070B14}
+html{scroll-behavior:smooth}
+a.btn{text-decoration:none;display:inline-block}
+.btn.y{background:var(--tag);color:var(--ink)}.btn.y:hover{background:#F7C928}
+.btn.g{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.35)}.btn.g:hover{background:rgba(255,255,255,.1)}
+.lp-hero{position:relative;min-height:100vh;background:#0F1B24;color:#fff;overflow:hidden;display:flex;flex-direction:column}
+.lp-nav{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:22px 5vw}
+.lp-nav .logo{color:#fff}
+.blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;animation:drift 14s ease-in-out infinite}
+.b1{width:420px;height:420px;background:#EBB80F;top:-120px;left:-100px}
+.b2{width:480px;height:480px;background:#2F5D9B;bottom:-160px;right:-120px;animation-delay:-6s}
+.b3{width:260px;height:260px;background:#1B8A5A;top:40%;left:55%;opacity:.35;animation-delay:-3s}
+@keyframes drift{50%{transform:translate(60px,40px) scale(1.12)}}
+.lp-body{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px 6vw 40px}
+.pill{display:inline-flex;gap:8px;align-items:center;border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:6px 14px;font-size:13px;margin-bottom:26px;background:rgba(255,255,255,.06)}
+.pill i{width:8px;height:8px;border-radius:50%;background:#3DD68C;animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.3}}
+.lp-hero h1{font-size:clamp(46px,9vw,112px);line-height:.95;letter-spacing:-.035em;max-width:13ch}
+.lp-hero h1 em{font-style:normal;color:var(--tag)}
+.lp-hero p{max-width:50ch;color:#B9C4CC;font-size:18px;margin:24px 0 32px}
+.lp-cta{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.lp-cta .btn{padding:15px 26px;font-size:16px}
+.cue{margin-top:44px;color:#B9C4CC;font-size:13px;animation:bob2 1.8s ease-in-out infinite}
+@keyframes bob2{50%{transform:translateY(8px)}}
+.marq{position:relative;z-index:2;overflow:hidden;border-top:1px solid rgba(255,255,255,.12);padding:14px 0;background:rgba(0,0,0,.2)}
+.track{display:flex;gap:14px;width:max-content;animation:mq 32s linear infinite}
+.track span{white-space:nowrap;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:99px;padding:7px 15px;font-size:14px}
+.track b{color:#3DD68C;margin-left:6px}
+@keyframes mq{to{transform:translateX(-50%)}}
+.sec{padding:96px 5vw;max-width:1180px;margin:0 auto}
+.sec h2{font-size:clamp(30px,4.6vw,52px);letter-spacing:-.02em;line-height:1.05;max-width:18ch;margin-bottom:12px}
+.sec .lead{color:var(--ink2);max-width:52ch;margin:0 0 44px;font-size:17px}
+.cards3{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.fc{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:28px}
+.fc .n{width:46px;height:46px;border-radius:12px;background:var(--tag);display:grid;place-items:center;font:700 20px 'Bricolage Grotesque'}
+.fc h3{font-size:22px;margin:18px 0 8px}.fc p{margin:0;color:var(--ink2)}
+.fc.dk{background:var(--ink);color:#fff;border-color:var(--ink)}.fc.dk p{color:#B9C4CC}.fc.dk .n{background:#fff;color:var(--ink)}
+.rv{opacity:0;transform:translateY(32px);transition:opacity .8s ease,transform .8s ease;transition-delay:var(--d,0s)}
+.rv.in{opacity:1;transform:none}
+
+.story{height:480vh;position:relative;background:#1B1240}
+.stage{position:sticky;top:0;height:100vh;overflow:hidden;color:#fff;background:#2A1A5E}
+.sky{position:absolute;inset:0;z-index:0}
+.sun{position:absolute;z-index:1;width:min(24vh,20vw);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFF3B0,#F7C948 60%,#F29B38);box-shadow:0 0 100px 34px rgba(255,196,90,.45);display:grid;place-items:center;font:800 clamp(26px,6vh,64px) 'Bricolage Grotesque',sans-serif;color:rgba(130,70,0,.5);will-change:transform;transform:translate(-50%,-50%)}
+.ly{position:absolute;left:-10vw;width:120vw;top:0;height:100%;transform-origin:50% 90%;will-change:transform}
+.ly svg{width:100%;height:100%;display:block}
+.z2{z-index:2}.z4{z-index:4}.z5{z-index:5}.z6{z-index:6}
+.fl{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden}
+.fl .it{position:absolute;left:0;top:0;fill:rgba(255,255,255,.14);stroke:rgba(255,246,230,.95);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;filter:drop-shadow(0 0 12px rgba(255,220,160,.55));will-change:transform}
+.fl .bd{position:absolute;left:0;top:0;fill:none;stroke:rgba(255,255,255,.85);stroke-width:2;stroke-linecap:round;will-change:transform}
+.shade{position:absolute;inset:0;z-index:7;pointer-events:none;background:linear-gradient(90deg,rgba(14,8,40,.6) 0%,rgba(14,8,40,.25) 45%,transparent 70%)}
+.nav2{position:absolute;top:0;left:0;right:0;z-index:9;display:flex;justify-content:space-between;align-items:center;padding:22px 5vw}
+.nav2 .logo{color:#fff}
+.scene{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;text-align:left;padding:0 7vw;pointer-events:none;opacity:0}
+.scene h1,.scene h2{margin:0;line-height:.95;white-space:nowrap;text-shadow:0 4px 40px rgba(20,8,50,.55)}
+.hero{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;text-transform:uppercase;letter-spacing:-.04em;font-size:clamp(44px,12vw,180px)}
+.ser{font-family:'Playfair Display',serif;font-weight:600;letter-spacing:-.01em;line-height:1.02!important;font-size:clamp(34px,7.4vw,112px)}
+.ch{display:inline-block;will-change:transform,opacity}
+.scene p{font-size:clamp(15px,1.7vw,20px);color:#F6EEFF;max-width:42ch;margin:16px 0 0;text-shadow:0 2px 20px rgba(20,8,50,.7)}
+.scene p.tg{font:600 clamp(22px,3vw,40px)/1.1 'Playfair Display',serif;margin-top:14px}
+.cnt{font:700 clamp(54px,10vw,140px) 'Bricolage Grotesque',sans-serif;letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin-top:12px;transition:color .3s;text-shadow:0 4px 40px rgba(20,8,50,.5)}
+.cnt.hit{color:#3DD68C}
+.mailc{margin-top:20px;background:rgba(255,255,255,.14);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.3);border-radius:14px;padding:14px 20px;text-align:left;font-size:14px}
+.mailc b{display:block}.mailc span{color:#EADFFF}
+.scene .btn{pointer-events:auto;margin-top:24px;padding:15px 28px;font-size:16px}
+.cue{position:absolute;bottom:26px;left:7vw;z-index:9;color:#F6EEFF;font-size:13px;letter-spacing:.14em;text-transform:uppercase;animation:bob2 1.8s ease-in-out infinite}
+.autoBtn{position:absolute;right:5vw;bottom:22px;z-index:9;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);backdrop-filter:blur(8px);color:#fff;border-radius:99px;padding:9px 16px;font-size:13px;font-weight:600}.autoBtn:hover{background:rgba(255,255,255,.25)}
+@media(prefers-reduced-motion:reduce){.story{height:100vh}.autoBtn{display:none}}
+.loginsec{position:relative;overflow:hidden;margin-top:-1px;padding:110px 5vw 120px;border-radius:44px 44px 0 0;background:linear-gradient(135deg,#F9D857 0%,#EBB80F 55%,#F2A93B 100%);color:#13212C}
+.loginsec:before,.loginsec:after{content:'';position:absolute;border-radius:50%;background:rgba(255,255,255,.22);pointer-events:none}
+.loginsec:before{width:520px;height:520px;right:-140px;top:-160px}.loginsec:after{width:360px;height:360px;left:-120px;bottom:-140px;background:rgba(19,33,44,.07)}
+.lgrid{position:relative;z-index:1;max-width:1120px;margin:0 auto;display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
+.ltag{display:inline-block;background:#13212C;color:#fff;border-radius:99px;padding:7px 15px;font-size:13px;font-weight:600;margin-bottom:22px}
+.lleft h2{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(40px,6.2vw,84px);line-height:.98;letter-spacing:-.03em;margin:0 0 18px}
+.lleft h2 u{text-decoration:none;background:linear-gradient(#13212C,#13212C) 0 94%/100% .1em no-repeat}
+.lleft>p{font-size:18px;max-width:44ch;margin:0 0 28px;color:#3B3510}
+.lcard{background:#fff;border-radius:20px;padding:22px;max-width:420px;box-shadow:0 30px 60px -28px rgba(19,33,44,.55)}
+.lcard .lc-t{font-weight:700;margin-bottom:14px;text-align:left}
+#googleSignInBtn{display:flex;justify-content:center;min-height:44px}
+.lcard small{display:block;margin-top:14px;color:var(--ink2);font-size:12.5px;text-align:left}
+.trust{list-style:none;display:flex;gap:10px 22px;flex-wrap:wrap;padding:0;margin:26px 0 0;font-weight:600;font-size:14.5px}
+.lright{position:relative;height:460px}
+.mk{position:absolute;width:290px;background:#fff;border-radius:18px;padding:16px;box-shadow:0 28px 50px -24px rgba(19,33,44,.55)}
+.mk .r1{display:flex;gap:12px;align-items:center;font-weight:600;font-size:14px}
+.mk .th{width:46px;height:46px;border-radius:11px;background:#F1F4EE;display:grid;place-items:center;font-size:24px;flex:none}
+.mk .pr{font:800 28px 'Bricolage Grotesque',sans-serif;margin:12px 0 8px;letter-spacing:-.02em}
+.mk .gb{height:8px;background:#E3E8DF;border-radius:4px;overflow:hidden}.mk .gb b{display:block;height:100%;background:#13212C;border-radius:4px}
+.mk.ok .pr{color:#1B8A5A}.mk.ok .gb b{background:#1B8A5A}
+.mk .tx{font-size:12.5px;color:#566470;margin-top:7px}
+.m1{top:0;left:4%;transform:rotate(-5deg);animation:fl 5s ease-in-out infinite}
+.m2{top:140px;right:0;transform:rotate(4deg);animation:fl 6s .8s ease-in-out infinite}
+.m3{top:290px;left:0;transform:rotate(-2deg);animation:fl 5.5s 1.4s ease-in-out infinite}
+@media(max-width:900px){.lgrid{grid-template-columns:1fr}.lright{display:none}.loginsec{padding:80px 6vw 90px;border-radius:30px 30px 0 0}}
+@media(prefers-reduced-motion:reduce){.rv{opacity:1;transform:none}}
 main{display:none;max-width:1180px;margin:0 auto;padding:12px 5vw 80px}
 .top{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-bottom:26px}
 .top h1{font-size:clamp(28px,4vw,44px);line-height:1.08;letter-spacing:-.015em;max-width:20ch}
@@ -89,15 +180,77 @@ main{display:none;max-width:1180px;margin:0 auto;padding:12px 5vw 80px}
 </style>
 </head>
 <body>
-<header>
+<header id="mainHeader" style="display:none">
   <div class="logo"><i></i>PriceWatch</div>
   <div class="chip" id="userChip"><img id="userAvatar" alt=""><span id="userName"></span><button onclick="logout()">Log out</button></div>
 </header>
 
 <div id="loginGate">
-  <h1>Buy it when the price is right.</h1>
-  <p>Sign in with Google, add an Amazon link and a target price. We email you the moment it drops.</p>
-  <div id="googleSignInBtn"></div>
+  <section class="story" id="story">
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+      <symbol id="p-phone" viewBox="0 0 100 100"><rect x="30" y="6" width="40" height="88" rx="9"/><rect x="35" y="14" width="30" height="64" rx="3"/><circle cx="50" cy="86" r="2.5"/></symbol>
+      <symbol id="p-head" viewBox="0 0 100 100"><path d="M20 62V52a30 30 0 0 1 60 0v10" fill="none"/><rect x="12" y="54" width="16" height="28" rx="7"/><rect x="72" y="54" width="16" height="28" rx="7"/></symbol>
+      <symbol id="p-watch" viewBox="0 0 100 100"><path d="M36 28l3-18h22l3 18M36 72l3 18h22l3-18" fill="none"/><rect x="26" y="28" width="48" height="44" rx="13"/><path d="M50 40v11l8 5" fill="none"/></symbol>
+      <symbol id="p-laptop" viewBox="0 0 100 100"><rect x="18" y="20" width="64" height="44" rx="4"/><path d="M8 72h84l-6 8H14z"/></symbol>
+      <symbol id="p-buds" viewBox="0 0 100 100"><circle cx="34" cy="34" r="13"/><rect x="29" y="44" width="10" height="38" rx="5"/><circle cx="66" cy="34" r="13"/><rect x="61" y="44" width="10" height="38" rx="5"/></symbol>
+      <symbol id="p-box" viewBox="0 0 100 100"><path d="M50 10l36 18v44L50 90 14 72V28z"/><path d="M14 28l36 18 36-18M50 46v44M32 19l36 18" fill="none"/></symbol>
+    </defs></svg>
+    <div class="stage">
+      <div class="sky" id="sky"></div>
+      <div class="sun" id="sun">₹</div>
+      <div class="ly z2" id="lFar"><svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+        <path id="fFar" d="M0 340L200 360L330 300L480 380L620 360L760 440L900 420L1040 500L1200 480L1350 560L1600 540V900H0Z"/>
+        <g id="chart"><path id="ridge" d="M0 340L200 360L330 300L480 380L620 360L760 440L900 420L1040 500L1200 480L1350 560L1600 540" fill="none" stroke="#FFD36B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="0" x2="1600" y1="560" y2="560" stroke="#3DD68C" stroke-width="3" stroke-dasharray="14 10"/>
+          <text x="960" y="548" fill="#3DD68C" font-size="30" font-weight="700">Target ₹28,000</text><circle cx="200" cy="360" r="9" fill="#FFD36B"/><circle cx="480" cy="380" r="9" fill="#FFD36B"/><circle cx="760" cy="440" r="9" fill="#FFD36B"/><circle cx="1040" cy="500" r="9" fill="#FFD36B"/><circle cx="1350" cy="560" r="9" fill="#FFD36B"/></g></svg></div>
+      <div class="fl" id="fl" aria-hidden="true"></div>
+      <div class="ly z4" id="lMid"><svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><path id="fMid" d="M0 640C220 580 400 620 560 590S900 540 1100 600S1450 590 1600 640V900H0Z"/></svg></div>
+      <div class="ly z5" id="lHill"><svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><path id="fHill" d="M0 740C260 690 480 740 760 710S1200 670 1600 730V900H0Z"/></svg></div>
+      <div class="ly z6" id="lFore"><svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><path id="fFore" d="M0 836C300 790 600 856 900 812S1400 800 1600 846V900H0Z"/><path id="grass"/></svg></div>
+      <div class="shade"></div>
+      <nav class="nav2"><div class="logo"><i></i>PriceWatch</div><a class="btn g" href="#login">Log in</a></nav>
+      <div class="scene">
+        <h1 class="split hero" data-d="l">PriceWatch</h1>
+        <p class="tg">Buy at Your Price</p>
+        <p>Track Amazon. Get alerted.</p>
+        <a class="btn y" href="#login">Start tracking</a>
+      </div>
+      <div class="scene">
+        <h2 class="split ser" data-d="l">Set Your</h2><h2 class="split ser" data-d="l">Target Price</h2>
+        <div class="cnt" id="cnt">₹31,999</div>
+        <p>Tell us what's fair.</p>
+      </div>
+      <div class="scene">
+        <h2 class="split ser" data-d="l">Get Instant</h2><h2 class="split ser" data-d="l">Email Alerts</h2>
+        <p>Buy the moment it drops.</p>
+        <div class="mailc"><b>🎯 Price Drop Alert</b><span>Samsung Galaxy A36 is now ₹27,499</span></div>
+        <a class="btn y" href="#login">Start tracking free</a>
+      </div>
+      <div class="cue" id="cue">Scroll down ↓</div>
+      <button class="autoBtn" id="autoBtn" type="button">⏸ Pause</button>
+    </div>
+  </section>
+
+  <section class="loginsec" id="login">
+    <div class="lgrid">
+      <div class="lleft rv">
+        <span class="ltag">Free to use · No credit card</span>
+        <h2>Start tracking in <u>10 seconds.</u></h2>
+        <p>Sign in with Google, paste an Amazon link and set your target. PriceWatch does the waiting for you.</p>
+        <div class="lcard">
+          <div class="lc-t">Continue with</div>
+          <div id="googleSignInBtn"></div>
+          <small>We only use your email to send price alerts.</small>
+        </div>
+        <ul class="trust"><li>✓ Private to you</li><li>✓ Instant email alerts</li><li>✓ Price history charts</li></ul>
+      </div>
+      <div class="lright rv" style="--d:.2s" aria-hidden="true">
+        <div class="mk ok m1"><div class="r1"><div class="th">📱</div>Galaxy A36 5G</div><div class="pr">₹27,499</div><div class="gb"><b style="width:100%"></b></div><div class="tx">Target reached — time to buy</div></div>
+        <div class="mk m2"><div class="r1"><div class="th">🎧</div>boAt Airdopes 141</div><div class="pr">₹1,299</div><div class="gb"><b style="width:77%"></b></div><div class="tx">23% above your target</div></div>
+        <div class="mk m3"><div class="r1"><div class="th">⌚</div>Noise ColorFit Pro</div><div class="pr">₹2,899</div><div class="gb"><b style="width:69%"></b></div><div class="tx">31% above your target</div></div>
+      </div>
+    </div>
+  </section>
 </div>
 
 <main id="dashboardMain">
@@ -148,6 +301,87 @@ const isHit = p => Number(p.current_price) <= Number(p.target_price);
 async function api(path, opts) { const r = await fetch(API_BASE + path, opts); if (!r.ok) throw new Error(r.status); return r.json(); }
 function toast(msg) { const d = document.createElement("div"); d.textContent = msg; $("toast").appendChild(d); setTimeout(() => d.remove(), 3800); }
 
+/* ---------- Scroll story: layered parallax landscape ---------- */
+(function story() {
+  const gate = $("loginGate"), st = $("story"); if (!st) return;
+  const scenes = [...st.querySelectorAll(".scene")], reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  st.querySelectorAll(".split").forEach(el => {
+    const t = el.textContent; el.setAttribute("aria-label", t); el.textContent = "";
+    [...t].forEach(c => { const sp = document.createElement("span"); sp.className = "ch"; sp.setAttribute("aria-hidden", "true"); sp.textContent = c === " " ? "\u00A0" : c; el.appendChild(sp); });
+  });
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v)), ease = t => 1 - Math.pow(1 - t, 3);
+  const hx = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
+  const mix = (a, b, t) => { const A = hx(a), B = hx(b); return "#" + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, "0")).join(""); };
+  const COL = { top: ["#3A2476", "#1A1D5C", "#0C3544"], mid: ["#C2549A", "#3C3CA0", "#1F7C7C"], bot: ["#FFB04F", "#7E8CE0", "#9FE0C0"], far: ["#B9609A", "#4A4FA8", "#35909A"], mnt: ["#7C3F96", "#33378A", "#24707A"], hill: ["#4A2A72", "#232668", "#175562"], fore: ["#150C30", "#0E1038", "#0A2A33"] };
+  const col = (a, x) => { const i = Math.min(1, Math.floor(x)); return mix(a[i], a[i + 1], x - i); };
+  /* grass blades */
+  let gd = "M0 900V838"; for (let x = 0; x < 1620; x += 11) gd += `L${x + 3} ${838 - 10 - Math.random() * 34}L${x + 8} 838`; $("grass").setAttribute("d", gd + "V900Z");
+  /* floating products + birds */
+  const fl = $("fl"), SY = ["phone", "head", "watch", "buds", "box", "laptop"], YY = [14, 30, 10, 38, 22, 44], NS = "http://www.w3.org/2000/svg";
+  const items = SY.map((sy, n) => { const el = document.createElementNS(NS, "svg"); el.setAttribute("viewBox", "0 0 100 100"); el.setAttribute("class", "it"); el.innerHTML = `<use href="#p-${sy}"/>`; const sz = 46 + (n * 29 % 30); el.style.width = el.style.height = sz + "px"; el.style.opacity = .7 + (n % 3) * .1; fl.appendChild(el); return { el, y: YY[n], v: .035 + (n % 3) * .014, k: .9 + (n % 3) * .4, n }; });
+  const birds = Array.from({ length: 6 }, (_, n) => { const el = document.createElementNS(NS, "svg"); el.setAttribute("viewBox", "0 0 24 10"); el.setAttribute("class", "bd"); el.style.width = (20 + n % 3 * 8) + "px"; el.innerHTML = '<path d="M1 8Q6 0 12 6Q18 0 23 8"/>'; fl.appendChild(el); return { el, y: 8 + n * 6.5, v: .045 + (n % 3) * .015, k: 1.6, n }; });
+  const all = [...items, ...birds];
+  all.forEach((d, i) => d.b = i * ((innerWidth + 400) / all.length));
+  /* ridge as price line */
+  const ridge = $("ridge"), RL = ridge.getTotalLength(); ridge.style.strokeDasharray = RL;
+  const L = { far: $("lFar"), mid: $("lMid"), hill: $("lHill"), fore: $("lFore") }, G = { far: [.18, -4], mid: [.45, -8], hill: [.8, -13], fore: [1.15, -20] };
+  /* auto-scroll */
+  const btn = $("autoBtn"), DUR = 12000; let auto = !reduce, t0 = null, startAt = 0, endTimer = null;
+  const endY = () => st.offsetTop + st.offsetHeight - innerHeight, setBtn = () => { btn.textContent = auto ? "⏸ Pause" : "▶ Auto-play"; };
+  function stopAuto() { auto = false; t0 = null; clearTimeout(endTimer); endTimer = null; setBtn(); }
+  ["wheel", "touchstart", "keydown"].forEach(ev => addEventListener(ev, () => { if (auto) stopAuto(); }, { passive: true }));
+  btn.addEventListener("click", () => { if (auto) stopAuto(); else { if (scrollY >= endY() - 5) scrollTo({ top: 0, behavior: "instant" }); auto = true; t0 = null; startAt = 0; setBtn(); } });
+  function autoStep(now) {
+    if (!auto || intro < 1) return;
+    if (!startAt) startAt = now + 500; if (now < startAt) return;
+    const E = endY(); if (t0 === null) t0 = now - (scrollY / E) * DUR;
+    const y = clamp((now - t0) / DUR) * E; scrollTo({ top: y, behavior: "instant" });
+    if (y >= E - 1 && !endTimer) endTimer = setTimeout(() => { if (auto) { stopAuto(); $("login").scrollIntoView({ behavior: "smooth" }); } }, 1500);
+  }
+  let p = 0, intro = 0, last = performance.now();
+  function calc() { const r = st.getBoundingClientRect(); p = clamp(-r.top / Math.max(1, r.height - innerHeight)); }
+  function render(time) {
+    const x = p * 2, e = ease(p), vw = innerWidth, vh = innerHeight;
+    $("sky").style.background = `linear-gradient(${col(COL.top, x)},${col(COL.mid, x)} 52%,${col(COL.bot, x)})`;
+    $("fFar").setAttribute("fill", col(COL.far, x)); $("fMid").setAttribute("fill", col(COL.mnt, x)); $("fHill").setAttribute("fill", col(COL.hill, x));
+    $("fFore").setAttribute("fill", col(COL.fore, x)); $("grass").setAttribute("fill", col(COL.fore, x));
+    for (const k in L) L[k].style.transform = `translate(${G[k][1] * (p - .5)}vw,0) scale(${1 + G[k][0] * e})`;
+    const sun = $("sun"); sun.style.left = (72 - 42 * p) + "%"; sun.style.top = (24 + 34 * Math.sin(Math.PI * p)) + "%"; sun.style.transform = `translate(-50%,-50%) scale(${1 + .45 * p})`;
+    const d = ease(clamp((p - .22) / .28)); ridge.style.strokeDashoffset = RL * (1 - d);
+    $("chart").style.opacity = (clamp((p - .24) / .1) * (1 - clamp((p - .74) / .14))).toFixed(3);
+    const tot = vw + 400;
+    all.forEach(o => { const X = ((((o.b - time * o.v - p * vw * o.k) % tot) + tot) % tot) - 200, Y = vh * o.y / 100 + Math.sin(time / 1500 + o.n * 2) * 8 - p * 30; o.el.style.transform = `translate(${X}px,${Y}px)`; });
+    birds.forEach(o => { o.el.style.transform += ` scaleY(${(.7 + .3 * Math.sin(time / 140 + o.n * 3)).toFixed(2)})`; });
+    scenes.forEach((sc, i) => {
+      const lt = p * 3 - i, en = i === 0 ? intro : ease(clamp(lt / .4)), xo = i < 2 ? clamp((lt - .78) / .22) : 0, vis = lt >= 0 && (lt <= 1 || i === 2);
+      sc.style.opacity = vis ? (en * (1 - xo)).toFixed(3) : 0; if (!vis) return;
+      sc.style.pointerEvents = "none";
+      sc.querySelectorAll(".split").forEach(hd => hd.querySelectorAll(".ch").forEach((c, j) => {
+        c.style.transform = `translate(${(1 - en) * -1 * (vw * .3 + j * 40)}px,${-xo * 60}px)`; c.style.opacity = clamp(en * 1.5 - j * .05) * (1 - xo);
+      }));
+      if (i === 1) { const v = 31999 + (27499 - 31999) * ease(clamp((lt - .2) / .6)); $("cnt").textContent = inr(Math.round(v)); $("cnt").classList.toggle("hit", v <= 28000); }
+    });
+    $("cue").style.opacity = 1 - clamp(p * 12);
+  }
+  function frame(now) {
+    if (gate.style.display === "none") return;
+    const dt = now - last; last = now; if (intro < 1) intro = Math.min(1, intro + dt / 800);
+    autoStep(now); calc();
+    const r = st.getBoundingClientRect(); if (r.bottom > 0 && r.top < innerHeight) render(now);
+    requestAnimationFrame(frame);
+  }
+  addEventListener("scroll", calc, { passive: true }); calc();
+  if (reduce) { p = .12; intro = 1; render(0); } else requestAnimationFrame(frame);
+})();
+
+/* ---------- Scroll reveal ---------- */
+(function () {
+  const els = document.querySelectorAll(".rv");
+  if (!("IntersectionObserver" in window)) return els.forEach(e => e.classList.add("in"));
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: .15 });
+  els.forEach(e => io.observe(e));
+})();
+
 /* ---------- Google sign-in ---------- */
 function initGoogle() {
   if (!window.google || !google.accounts) return false;
@@ -169,7 +403,7 @@ async function handleGoogleLogin(resp) {
   } catch (e) { toast("Google sign-in failed. Please try again."); }
 }
 function showDashboard() {
-  $("loginGate").style.display = "none"; $("dashboardMain").style.display = "block";
+  $("loginGate").style.display = "none"; $("dashboardMain").style.display = "block"; $("mainHeader").style.display = "flex"; window.scrollTo(0, 0);
   $("userChip").style.display = "flex"; $("userName").textContent = currentUser.name || currentUser.email;
   const a = $("userAvatar"); if (currentUser.picture) a.src = currentUser.picture; else a.style.display = "none";
   loadProducts();
