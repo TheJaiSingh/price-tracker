@@ -6,7 +6,7 @@ Amazon aur Flipkart product page se naam, image aur price nikalta hai.
 Cloud servers (jaise Railway) ko Amazon/Flipkart aksar block karte hain. Isliye:
 1. SCRAPER_API_KEY env variable set ho to request ScraperAPI ke through jaati hai (reliable).
 2. Warna seedha try hota hai.
-3. Price na mile to bhi asli NAME (page ya URL se) aur IMAGE (Amazon ASIN se) use hota hai.
+3. Price na mile to bhi asli NAME (page ya URL se) aur IMAGE (Meta tags ya Amazon ASIN se) use hota hai.
    Sirf price demo mode mein thoda hilta hai.
 """
 
@@ -65,7 +65,7 @@ def name_from_url(url: str):
         if p.lower() == marker and i > 0:
             slug = parts[i - 1]
             if slug.lower() not in ("gp", "product") and not re.fullmatch(r"[A-Z0-9]{10}", slug):
-                return slug.replace("-", " ").strip()
+                return slug.replace("-", " ").title().strip()
     return None
 
 
@@ -130,44 +130,77 @@ def _parse(html: str):
         raise ValueError("Bot check (captcha)")
     soup = BeautifulSoup(html, "html.parser")
 
+    # --- TITLE EXTRACTION (Amazon & Flipkart) ---
     name = None
-    for sel in ("#productTitle", "span.VU-ZEz", "span.B_NuCI"):
+    title_selectors = (
+        "#productTitle",               # Amazon
+        "span.VU-ZEz",                 # Flipkart New
+        "span.B_NuCI",                 # Flipkart Classic
+        "h1._63y8a",                   # Flipkart Mobile
+        "span.VU-415",                 # Flipkart Alt
+        "h1"                           # General Fallback
+    )
+    for sel in title_selectors:
         t = soup.select_one(sel)
         if t and t.get_text(strip=True):
             name = t.get_text(strip=True)
             break
 
+    # --- IMAGE EXTRACTION (Amazon & Flipkart) ---
     image = None
     img = soup.find("img", {"id": "landingImage"})
     if img:
         image = img.get("data-old-hires") or img.get("src")
     if not image:
-        for sel in ("img.DByuf4", "img._396cs4"):
+        img_selectors = (
+            "img._DByuf4",              # Flipkart Main Image New
+            "img._396cs4",              # Flipkart Classic
+            "img._2r_T1I",              # Flipkart Gallery
+            "img._539Kw",               # Flipkart Alt
+            "img.v2I08"                 # Flipkart
+        )
+        for sel in img_selectors:
             t = soup.select_one(sel)
             if t and t.get("src"):
                 image = t["src"]
                 break
 
+    # --- PRICE EXTRACTION (Amazon & Flipkart) ---
     price = None
-    for sel in (".a-price .a-offscreen", "span.a-price-whole", "#priceblock_ourprice",
-                "#priceblock_dealprice", "div.Nx9bqj", "div._30jeq3"):
+    price_selectors = (
+        ".a-price .a-offscreen",       # Amazon
+        "span.a-price-whole",          # Amazon
+        "#priceblock_ourprice",        # Amazon
+        "#priceblock_dealprice",       # Amazon
+        "div.Nx9bqj",                  # Flipkart New (Price)
+        "div._30jeq3",                 # Flipkart Classic (Price)
+        "div._16J3Ws"                  # Flipkart Alt
+    )
+    for sel in price_selectors:
         tag = soup.select_one(sel)
         if tag:
             price = _to_price(tag.get_text())
             if price:
                 break
 
-    # JSON-LD / og tags se khali jagah bharo (dono sites ke liye)
+    # --- JSON-LD / META TAGS FALLBACK ---
     lp, ln, li = _jsonld(soup)
     price = price or lp
     name = name or ln
     image = image or li
+
+    # OpenGraph Fallback (Flipkart par Meta Tags se Title & Image sabse accurate milta hai)
     if not name:
-        og = soup.find("meta", {"property": "og:title"})
-        name = og["content"].strip() if og and og.get("content") else None
+        og_title = soup.find("meta", {"property": "og:title"}) or soup.find("meta", {"name": "title"})
+        if og_title and og_title.get("content"):
+            clean_title = og_title["content"].replace("Online at Best Price in India", "").replace("| Flipkart", "").strip()
+            name = clean_title
+            
     if not image:
-        og = soup.find("meta", {"property": "og:image"})
-        image = og["content"] if og and og.get("content") else None
+        og_img = soup.find("meta", {"property": "og:image"}) or soup.find("meta", {"name": "image"})
+        if og_img and og_img.get("content"):
+            image = og_img["content"]
+
     return price, name, image
 
 
