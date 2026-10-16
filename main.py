@@ -51,7 +51,7 @@ app.add_middleware(
 DB_CONFIG = {
     "host": os.environ.get("DB_HOST", "localhost"),
     "user": os.environ.get("DB_USER", "root"),
-    "password": os.environ.get("DB_PASSWORD", "Jai3121@singh"),
+    "password": os.environ.get("DB_PASSWORD", ""),
     "database": os.environ.get("DB_NAME", "price_tracker"),
     "port": int(os.environ.get("DB_PORT", 3306)),
 }
@@ -125,8 +125,9 @@ def set_state(key, value):
 # ============================================================
 # ALERT LOGIC (ek hi alert, jab tak price aur na gire)
 # ============================================================
-def decide_alert(new, target, pct, start, last):
-    """Returns (reason, should_send). last = pichhli alert ka price (ya None)."""
+def decide_alert(new, target, pct, start, last, force=False):
+    """Returns (reason, should_send). last = pichhli alert ka price (ya None).
+    force=True (manual Check price button): target hit hai to hamesha email."""
     reason = None
     if new <= target:
         reason = f"Your target price of ₹{target:,.0f} has been reached!"
@@ -134,12 +135,12 @@ def decide_alert(new, target, pct, start, last):
         reason = f"The price dropped {pct:g}% since you started tracking!"
     if not reason:
         return None, False
-    if last is None or new < last:
+    if force or last is None or new < last:
         return reason, True
     return reason, False
 
 
-def maybe_alert(cur, pr, new, name, image):
+def maybe_alert(cur, pr, new, name, image, force=False):
     """pr: dict with id, target_price, alert_percent, last_alerted_price, product_url, email"""
     target = float(pr["target_price"])
     pct = float(pr["alert_percent"]) if pr.get("alert_percent") else None
@@ -150,15 +151,27 @@ def maybe_alert(cur, pr, new, name, image):
         r = cur.fetchone()
         start = float(r["price"]) if r else None
 
-    reason, send = decide_alert(new, target, pct, start, last)
+    reason, send = decide_alert(new, target, pct, start, last, force)
     sent = False
     if send:
         sent = send_price_alert(name, new, target, pr["product_url"], pr["email"], image, reason, site_of(pr["product_url"]))
         if sent:
             cur.execute("UPDATE products SET last_alerted_price = %s WHERE id = %s", (new, pr["id"]))
-    elif reason is None and last is not None:
-        cur.execute("UPDATE products SET last_alerted_price = NULL WHERE id = %s", (pr["id"],))
-    return sent
+            status = {"code": "sent", "message": f"Alert email sent to {pr['email']}"}
+        else:
+            status = {"code": "send_failed",
+                      "message": "Target hit but the email could not be sent (check BREVO_API_KEY / SENDER_EMAIL and Brevo logs)"}
+    elif reason is None:
+        if last is not None:
+            cur.execute("UPDATE products SET last_alerted_price = NULL WHERE id = %s", (pr["id"],))
+        status = {"code": "above_target",
+                  "message": f"Price Rs.{new:,.0f} is above your target Rs.{target:,.0f} - no alert needed"}
+    else:
+        status = {"code": "already_alerted",
+                  "message": f"Target hit, but an alert was already sent at Rs.{last:,.0f}. "
+                             f"Next alert comes only if the price falls further."}
+    print(f"[alert] product {pr['id']}: {status['code']} - {status['message']}")
+    return sent, status
 
 
 def check_product(conn, product_id, auto=False):
@@ -191,7 +204,7 @@ def check_product(conn, product_id, auto=False):
         name, image = pr["product_name"], pr["image_url"]
     cur.execute("INSERT INTO price_history (product_id, price) VALUES (%s, %s)", (product_id, new))
 
-    sent = maybe_alert(cur, pr, new, name, image)
+    sent, status = maybe_alert(cur, pr, new, name, image, force=not auto)
     conn.commit()
     cur.close()
     return {
@@ -199,6 +212,8 @@ def check_product(conn, product_id, auto=False):
         "new_price": new,
         "target_hit": new <= float(pr["target_price"]),
         "alert_sent": bool(sent),
+        "alert_status": status["code"],
+        "message": status["message"],
         "real": info["real"],
     }
 
@@ -274,11 +289,12 @@ def add_product(product: ProductCreate, email: str = Query(...)):
 
     pr = {"id": product_id, "target_price": product.target_price, "alert_percent": product.alert_percent,
           "last_alerted_price": None, "product_url": link, "email": email}
-    maybe_alert(cursor, pr, price, name, image_url)
+    sent, status = maybe_alert(cursor, pr, price, name, image_url)
     conn.commit()
     cursor.close()
     conn.close()
-    return {"id": product_id, "name": name, "current_price": price, "image_url": image_url}
+    return {"id": product_id, "name": name, "current_price": price, "image_url": image_url,
+            "alert_sent": bool(sent), "message": status["message"]}
 
 
 # ============================================================
@@ -380,11 +396,11 @@ def update_product(product_id: int, body: ProductUpdate, email: str = Query(...)
         "SELECT p.*, u.email FROM products p JOIN users u ON p.user_id = u.id WHERE p.id = %s", (product_id,)
     )
     pr = cur.fetchone()
-    sent = maybe_alert(cur, pr, float(pr["current_price"]), pr["product_name"], pr["image_url"])
+    sent, status = maybe_alert(cur, pr, float(pr["current_price"]), pr["product_name"], pr["image_url"])
     conn.commit()
     cur.close()
     conn.close()
-    return {"updated": product_id, "alert_sent": bool(sent)}
+    return {"updated": product_id, "alert_sent": bool(sent), "message": status["message"]}
 
 
 # ============================================================
