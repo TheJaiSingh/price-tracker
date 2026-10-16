@@ -530,7 +530,7 @@ function openDrawer(id, keep) {
       <div class="ar"><label>Target price (₹)<input id="eTarget" inputmode="decimal" value="${t}"></label>
       <label>Or % drop (empty = off)<input id="ePct" inputmode="decimal" value="${p.alert_percent ? Number(p.alert_percent) : ""}"></label></div>
       <button class="btn" style="margin-top:12px" onclick="saveAlert(${id}, this)">Save alert</button>
-      <small>You get one email per new low, not repeated emails for the same price.</small></div>
+      <small>Automatic checks (every 6 hours) email once per new low. "Check price now" emails you every time the target is hit.</small></div>
     <div class="acts"><button class="btn" onclick="refreshProduct(${id}, this)">Check price now</button><a class="btn alt" href="${esc(url)}" target="_blank" rel="noopener">View product</a><button class="btn alt del" onclick="deleteProduct(${id}, this)">Delete</button></div>`;
   $("drawer").classList.add("on"); $("scrim").classList.add("on"); $("drawer").setAttribute("aria-hidden", "false");
   if (!keep) $("drawer").querySelector(".dx").focus();
@@ -567,9 +567,9 @@ async function addProduct(e) {
   if (!(target > 0)) return bad("Enter a target price above ₹0.");
   $("addBtn").disabled = true; $("addBtn").textContent = "Adding…"; msg.className = "msg"; msg.textContent = "Fetching the current price…";
   try {
-    await api("/products?email=" + encodeURIComponent(currentUser.email), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ product_url: url, target_price: target, alert_percent: pct >= 1 ? pct : null }) });
+    const added = await api("/products?email=" + encodeURIComponent(currentUser.email), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ product_url: url, target_price: target, alert_percent: pct >= 1 ? pct : null }) });
     $("urlInput").value = ""; $("priceInput").value = ""; $("pctInput").value = ""; msg.textContent = "";
-    toast("Product added to your watchlist."); await loadProducts();
+    toast(added.alert_sent ? "Product added. Target already reached - alert emailed." : "Product added to your watchlist."); await loadProducts();
   } catch (err) { bad("Couldn't add this product. Check the link and try again."); }
   $("addBtn").disabled = false; $("addBtn").textContent = "Start tracking";
 }
@@ -614,7 +614,7 @@ async function refreshProduct(id, btn) {
     const r = await api(`/products/${id}/refresh`, { method: "POST" });
     products = await api("/products?email=" + encodeURIComponent(currentUser.email));
     await loadHist(id); render();
-    toast(r.alert_sent ? `Target reached at ${inr(r.new_price)}. Alert emailed.` : r.target_hit ? `At target (${inr(r.new_price)}). Alert was already sent.` : `Checked: now ${inr(r.new_price)}.`);
+    toast(r.alert_sent ? `Target reached at ${inr(r.new_price)}. Alert emailed.` : `Checked: now ${inr(r.new_price)}. ${r.message || ""}`);
   } catch (err) { toast("Couldn't check the price. Try again in a moment."); btn.disabled = false; btn.textContent = label; }
 }
 </script>
