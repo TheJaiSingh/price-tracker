@@ -5,4 +5,4 @@ requests
 beautifulsoup4
 pydantic
 google-auth
-resend
+twilio
