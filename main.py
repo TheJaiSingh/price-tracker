@@ -1,14 +1,14 @@
 """
 main.py
 --------
-FastAPI backend with Google Sign-In, Email, and Twilio WhatsApp Alerts.
+FastAPI backend with Google Sign-In and Email Alerts.
 
 Endpoints:
  POST   /auth/google                  login with Google
  POST   /products?email=              add product (target price, optional % drop alert)
  GET    /products?email=              list products (+ lowest price, check count)
  GET    /products/{id}/history        price history
- POST   /products/{id}/refresh        re-check price now (+ email/WhatsApp alert, only once per new low)
+ POST   /products/{id}/refresh        re-check price now (+ email alert, only once per new low)
  POST   /products/check-all?email=    re-check all of this user's products
  PATCH  /products/{id}?email=         edit target price / % drop alert
  DELETE /products/{id}?email=         delete product
@@ -34,11 +34,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 import mysql.connector
-try:
-    from twilio.rest import Client
-except ImportError:  # twilio install na ho to bhi app crash na ho
-    Client = None
-    print("[whatsapp] 'twilio' package not installed - WhatsApp disabled, email still works")
 
 from scraper import fetch_product, site_of
 from notifier import send_price_alert, send_weekly_summary
@@ -63,13 +58,6 @@ DB_CONFIG = {
 
 CHECK_HOURS = float(os.environ.get("CHECK_INTERVAL_HOURS", 6))
 AUTO_CHECK = os.environ.get("AUTO_CHECK", "1") != "0"
-
-# Twilio Config for WhatsApp
-TWILIO_SID = os.environ.get("TWILIO_ACCOUNT_SID")
-TWILIO_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
-TWILIO_FROM = os.environ.get("TWILIO_WHATSAPP_FROM", "whatsapp:+14155238886")
-TO_WHATSAPP = os.environ.get("YOUR_WHATSAPP_NUMBER")
-
 
 def get_db_connection():
     return mysql.connector.connect(**DB_CONFIG)
@@ -134,39 +122,6 @@ def set_state(key, value):
 
 
 # ============================================================
-# WHATSAPP NOTIFICATION HELPER
-# ============================================================
-def send_whatsapp_alert(product_name, current_price, target_price, product_url):
-    if Client is None:
-        print("[whatsapp] skipped: twilio package missing")
-        return False
-    if not TWILIO_SID or not TWILIO_TOKEN or not TO_WHATSAPP:
-        print("[whatsapp] Twilio credentials not configured.")
-        return False
-    
-    try:
-        client = Client(TWILIO_SID, TWILIO_TOKEN)
-        message_body = (
-            f"🚨 *Price Drop Alert!* 🚨\n\n"
-            f"*{product_name}* has reached your target!\n"
-            f"Current Price: ₹{current_price:,.0f}\n"
-            f"Target Price: ₹{target_price:,.0f}\n\n"
-            f"🔗 Buy now: {product_url}"
-        )
-        
-        message = client.messages.create(
-            from_=TWILIO_FROM,
-            body=message_body,
-            to=TO_WHATSAPP
-        )
-        print(f"[whatsapp] Message sent successfully! SID: {message.sid}")
-        return True
-    except Exception as e:
-        print(f"[whatsapp] Failed to send message: {e}")
-        return False
-
-
-# ============================================================
 # ALERT LOGIC (ek hi alert, jab tak price aur na gire)
 # ============================================================
 def decide_alert(new, target, pct, start, last, force=False):
@@ -198,21 +153,14 @@ def maybe_alert(cur, pr, new, name, image, force=False):
     reason, send = decide_alert(new, target, pct, start, last, force)
     sent = False
     if send:
-        # 1. Original Email Alert
         email_sent = send_price_alert(name, new, target, pr["product_url"], pr["email"], image, reason, site_of(pr["product_url"]))
-        
-        # 2. Added WhatsApp Alert
-        whatsapp_sent = send_whatsapp_alert(name, new, target, pr["product_url"])
-
-        if email_sent or whatsapp_sent:
+        if email_sent:
             sent = True
             cur.execute("UPDATE products SET last_alerted_price = %s WHERE id = %s", (new, pr["id"]))
-            via = " & ".join(x for x, ok in (("Email", email_sent), ("WhatsApp", whatsapp_sent)) if ok)
-            miss = " & ".join(x for x, ok in (("Email", email_sent), ("WhatsApp", whatsapp_sent)) if not ok)
-            status = {"code": "sent", "message": f"Alert sent via {via}!" + (f" ({miss} failed - check Railway logs)" if miss else "")}
+            status = {"code": "sent", "message": f"Alert emailed to {pr['email']}"}
         else:
             status = {"code": "send_failed",
-                      "message": "Target hit but notifications could not be sent (check Brevo & Twilio logs)"}
+                      "message": "Target hit but the email could not be sent (check BREVO_API_KEY / SENDER_EMAIL and Brevo logs)"}
     elif reason is None:
         if last is not None:
             cur.execute("UPDATE products SET last_alerted_price = NULL WHERE id = %s", (pr["id"],))
@@ -227,7 +175,7 @@ def maybe_alert(cur, pr, new, name, image, force=False):
 
 
 def check_product(conn, product_id, auto=False):
-    """Price dobara scrape karo, save karo, zaroorat ho to email/WhatsApp.
+    """Price dobara scrape karo, save karo, zaroorat ho to email.
     auto=True (scheduler): asli price na mile to kuch nahi badalta."""
     cur = conn.cursor(dictionary=True)
     cur.execute(
