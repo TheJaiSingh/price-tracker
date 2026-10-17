@@ -34,7 +34,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 import mysql.connector
-from twilio.rest import Client
+try:
+    from twilio.rest import Client
+except ImportError:  # twilio install na ho to bhi app crash na ho
+    Client = None
+    print("[whatsapp] 'twilio' package not installed - WhatsApp disabled, email still works")
 
 from scraper import fetch_product, site_of
 from notifier import send_price_alert, send_weekly_summary
@@ -133,6 +137,9 @@ def set_state(key, value):
 # WHATSAPP NOTIFICATION HELPER
 # ============================================================
 def send_whatsapp_alert(product_name, current_price, target_price, product_url):
+    if Client is None:
+        print("[whatsapp] skipped: twilio package missing")
+        return False
     if not TWILIO_SID or not TWILIO_TOKEN or not TO_WHATSAPP:
         print("[whatsapp] Twilio credentials not configured.")
         return False
